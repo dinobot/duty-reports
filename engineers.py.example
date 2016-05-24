@@ -1,0 +1,6 @@
+# list of full names of engineers matching short names in excel schedule
+
+engineers = [
+'Vasiliy Pumpkin',
+'Rainbow Dash',
+'Pinkamena Pie']
