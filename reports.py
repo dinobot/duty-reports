@@ -71,7 +71,6 @@ for e in sheet.row_values(1):
       crew.append(e)
 
 for engineer in duty(int(day), daytime) or []:
-    delimeter = ', '
     if n < (len(duty(int(day), daytime)) - 2):
       delimeter = ', '
     elif n == (len(duty(int(day), daytime)) - 2):
@@ -107,7 +106,7 @@ for case in sf.query("SELECT CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,
           case_owner = '[UNASSIGNED]'
 
 # process all new & open
-    if status not in 'Pending':
+    if status not in 'Pending' and severity not in 'Sev 1':
       case_meta = { 
           'id' : case_id,
           'status' : status,
@@ -124,7 +123,8 @@ for case in sf.query("SELECT CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,
           'status' : status,
           'subject' : subject,
           'responsible' : case_owner,
-          'message' : escalation_message
+          'message' : escalation_message,
+          'l2': L2
           }
       active_sev1s.append(sev1_meta)
 
@@ -133,7 +133,7 @@ print 'Dity report,', reverse_daytime(daytime), datetime.now().date(), '\n'
 if active_sev1s:
   print 'Sev1 cases:', '\n'
   for sev1 in active_sev1s:
-    print '  L2:', L2
+    print '  L2:', sev1['l2']
     print ' ',', '.join([sev1['id'], sev1['status'], sev1['subject']])
     print '  Owned by', sev1['responsible'], '\n'
     if sev1['message']:
@@ -142,8 +142,11 @@ else:
     print 'Currently we have no SEV1 tickets'
 
 if active_cases:
-  print 'Active cases:', '\n'
-  for c in active_cases:
-    print ', '.join([c['id'], c['status'], c['subject'], c['responsible']])
+    print 'Active cases:', '\n'
+    for c in active_cases:
+      print ', '.join([c['id'], c['status'], c['subject'], c['responsible']])
 
-print '\n', result
+if result:
+    print '\n', result
+else:
+    print '\n', 'No European engineers scheduled for', datetime.now().date(), daytime

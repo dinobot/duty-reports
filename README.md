@@ -8,6 +8,6 @@ script requres:
 
 usage: 
 
-python reports.py <day || night>
+python reports.py [day || night]
 
 You need to specify shift for which you are making report (for day shift or for night shift next from yours)
