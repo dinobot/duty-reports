@@ -91,9 +91,14 @@ for case in sf.query("SELECT CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,
     status = case['Status']
     L2 = case['L2__c']
     case_id = case['CaseNumber']
-    subject = case['Subject']
     owner_id = case['OwnerId']
     modified = case['LastModifiedDate'].split('.')[0]
+
+# override empty subjects
+    if case['Subject']:
+        subject = case['Subject']
+    else:
+        subject = '(Empty Subject)'
 
     if case['Summary__c']:
         escalation_message = case['Summary__c']
