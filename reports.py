@@ -75,12 +75,12 @@ for engineer in duty(int(day), daytime) or []:
       delimeter = ', '
     elif n == (len(duty(int(day), daytime)) - 2):
       delimeter = ' and '
-    elif n > 1:
+    elif n >= 1:
       delimeter = ' are on-shift next'
     else:
       delimeter = ' is on-shift next'
-    result = result + nicename(engineer) + delimeter
     n+=1
+    result = result + nicename(engineer) + delimeter
 
 for engineer in sf.query("SELECT name,id from User")['records']:
     sf_engineers.append({engineer['Id']: engineer['Name']})
@@ -133,7 +133,7 @@ for case in sf.query("SELECT CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,
           }
       active_sev1s.append(sev1_meta)
 
-print 'Dity report,', reverse_daytime(daytime), datetime.now().date(), '\n'
+print 'Duty report,', reverse_daytime(daytime), datetime.now().date(), '\n'
 
 if active_sev1s:
   print 'Sev1 cases:', '\n'
