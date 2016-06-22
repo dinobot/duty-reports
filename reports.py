@@ -3,7 +3,10 @@ from simple_salesforce import Salesforce
 from datetime import datetime
 import xlrd
 import sys
+from jinja2 import Environment, PackageLoader
 from engineers import engineers
+
+env = Environment(loader=PackageLoader('duty-reports', 'templates'))
 
 crew = []
 schedule = []
@@ -30,7 +33,7 @@ sheet = rb.sheet_by_index(0)
 day = datetime.now().strftime("%d")
 daytime = sys.argv[1]
 
-result = ''
+next_on_duty = ''
 n = 0
 
 def duty(date, daytime):
@@ -80,14 +83,15 @@ for engineer in duty(int(day), daytime) or []:
     else:
       delimeter = ' is on-shift next'
     n+=1
-    result = result + nicename(engineer) + delimeter
+    next_on_duty = next_on_duty + nicename(engineer) + delimeter
 
 for engineer in sf.query("SELECT name,id from User")['records']:
     sf_engineers.append({engineer['Id']: engineer['Name']})
 
-for case in sf.query("SELECT CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,status,OwnerID,Severity_Level__c,Subject,LastModifiedDate,LastModifiedById from Case where status = 'Open' or status = 'New' or status = 'Pending'")['records']:
+for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,status,OwnerID,Severity_Level__c,Subject,LastModifiedDate,LastModifiedById from Case where status = 'Open' or status = 'New' or status = 'Pending'")['records']:
 
     severity = case['Severity_Level__c']
+    uuid = case['Id']
     status = case['Status']
     L2 = case['L2__c']
     case_id = case['CaseNumber']
@@ -118,6 +122,7 @@ for case in sf.query("SELECT CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,
           'severity_level' : severity,
           'subject' : subject,
           'responsible' : case_owner,
+          'uuid': uuid
           }
       active_cases.append(case_meta)
 
@@ -133,25 +138,6 @@ for case in sf.query("SELECT CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,
           }
       active_sev1s.append(sev1_meta)
 
-print 'Duty report,', reverse_daytime(daytime), datetime.now().date(), '\n'
+template = env.get_template('report.html')
 
-if active_sev1s:
-  print 'Sev1 cases:', '\n'
-  for sev1 in active_sev1s:
-    print '  L2:', sev1['l2']
-    print ' ',', '.join([sev1['id'], sev1['status'], sev1['subject']])
-    print '  Owned by', sev1['responsible'], '\n'
-    if sev1['message']:
-      print sev1['message'], '\n'
-else:
-    print 'Currently we have no SEV1 tickets'
-
-if active_cases:
-    print 'Active cases:', '\n'
-    for c in active_cases:
-      print ', '.join([c['id'], c['status'], c['subject'], c['responsible']])
-
-if result:
-    print '\n', result
-else:
-    print '\n', 'No European engineers scheduled for', datetime.now().date(), daytime
+print template.render(urgent = active_sev1s, url=sf_url, ac=active_cases, engineers = next_on_duty, date = datetime.now().date(), shift = daytime)
