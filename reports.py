@@ -5,6 +5,10 @@ import xlrd
 import sys
 from jinja2 import Environment, PackageLoader
 from engineers import engineers
+import sqlite3
+
+conn = sqlite3.connect('archive.db')
+c = conn.cursor()
 
 env = Environment(loader=PackageLoader('duty-reports', 'templates'))
 
@@ -32,6 +36,7 @@ sheet = rb.sheet_by_index(0)
 
 day = datetime.now().strftime("%d")
 daytime = sys.argv[1]
+date = datetime.now().date()
 
 next_on_duty = ''
 n = 0
@@ -53,6 +58,13 @@ def reverse_daytime(daytime):
     else:
       reverse_d = 'day'
     return reverse_d
+
+def daynight(hour):
+    if hour > 12:
+      day = 1
+    else:
+      day = 0
+    return day
 
 def sch():
     for rownum in range(sheet.nrows)[2:]:
@@ -140,4 +152,11 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
 
 template = env.get_template('report.html')
 
-print template.render(urgent = active_sev1s, url=sf_url, ac=active_cases, engineers = next_on_duty, date = datetime.now().date(), shift = daytime)
+message = template.render(urgent = active_sev1s, url=sf_url, ac=active_cases, engineers = next_on_duty, date = date, shift = daytime)
+
+c.execute("INSERT INTO reports VALUES(null, '%s', '%s' , '%s')" % (date, message.replace('\n', ''), daynight(datetime.now().hour)))
+
+conn.commit()
+conn.close()
+
+print message
