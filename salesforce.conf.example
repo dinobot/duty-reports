@@ -3,3 +3,7 @@ url =
 username =
 password =
 token =
+
+[EMail]
+reciever =
+sender =

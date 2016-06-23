@@ -6,6 +6,7 @@ import sys
 from jinja2 import Environment, PackageLoader
 from engineers import engineers
 import sqlite3
+from lumpy import Mail
 
 conn = sqlite3.connect('archive.db')
 c = conn.cursor()
@@ -24,6 +25,9 @@ sf_usr = parser.get('SalesForce', 'username')
 sf_pwd = parser.get('SalesForce', 'password') 
 sf_tkn = parser.get('SalesForce', 'token')
 
+sender_email = parser.get('EMail', 'sender')
+reciever_email = parser.get('EMail', 'reciever')
+
 sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
 
 time = datetime.now()
@@ -36,7 +40,7 @@ sheet = rb.sheet_by_index(0)
 
 day = datetime.now().strftime("%d")
 daytime = sys.argv[1]
-date = datetime.now().date()
+date = str(datetime.now().date())
 
 next_on_duty = ''
 n = 0
@@ -146,7 +150,8 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
           'subject' : subject,
           'responsible' : case_owner,
           'message' : escalation_message,
-          'l2': L2
+          'l2': L2,
+          'uuid': uuid
           }
       active_sev1s.append(sev1_meta)
 
@@ -158,5 +163,8 @@ c.execute("INSERT INTO reports VALUES(null, '%s', '%s' , '%s')" % (date, message
 
 conn.commit()
 conn.close()
+
+m = Mail(reciever_email, sender=sender_email, subject = 'Duty report, %s, %s' % (reverse_daytime(daytime), date), body=message, content = 'html')
+m.send()
 
 print message
