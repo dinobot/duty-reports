@@ -17,7 +17,7 @@
 {% if ac %}
   <h4> Active cases:</h4>
   {% for case in ac %}
-    <span style="padding-left:20px;"></span> <a href ="{{url}}/console#%2f{{case.uuid}}" >{{case.id}}</a>, {{case.status}}, {{case.severity_level}}, {{case.responsible}}, {{case.subject}} </br>
+    <span style="padding-left:20px;"></span> <a href ="{{url}}/console#%2f{{case.uuid}}" >{{case.id}}</a>, {{case.severity_level}}, {{case.subject}}, <i>{{case.responsible}}</i> </br>
   {% endfor %}
 {% endif %}
 
