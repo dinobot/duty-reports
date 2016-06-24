@@ -7,6 +7,7 @@ from jinja2 import Environment, PackageLoader
 from engineers import engineers
 import sqlite3
 from lumpy import Mail
+from unidecode import unidecode
 
 conn = sqlite3.connect('archive.db')
 c = conn.cursor()
@@ -116,7 +117,7 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
 
 # override empty subjects
     if case['Subject']:
-        subject = case['Subject']
+        subject = unidecode(case['Subject'])
     else:
         subject = '(Empty Subject)'
 
@@ -159,12 +160,10 @@ template = env.get_template('report.html')
 
 message = template.render(urgent = active_sev1s, url=sf_url, ac=active_cases, engineers = next_on_duty, date = date, shift = daytime)
 
-c.execute("INSERT INTO reports VALUES(null, '%s', '%s' , '%s')" % (date, message.replace('\n', ''), daynight(datetime.now().hour)))
+c.execute("INSERT INTO reports VALUES(null, ?, ?, ?)",  (date, message.replace('\n', ''), daynight(datetime.now().hour)))
 
 conn.commit()
 conn.close()
 
 m = Mail(reciever_email, sender=sender_email, subject = 'Duty report, %s, %s' % (reverse_daytime(daytime), date), body=message, content = 'html')
 m.send()
-
-print message
