@@ -3,11 +3,11 @@
 {% if urgent %}
   <h3>Sev1 cases:</h3>  
    {% for u in urgent %}
-     <span style="padding-left:20px;"></span> L2: {{u.l2}} </br>
-     <span style="padding-left:20px;"></span> <a href ="{{url}}/console#%2f{{u.uuid}}" >{{u.id}}</a>, {{u.subject}} </br>
-     <span style="padding-left:20px;"></span> Owned by, {{u.responsible}} </br>
+     <span style="padding-left:20px;"></span> L2: {{u.l2}} <br />
+     <span style="padding-left:20px;"></span> <a href ="{{url}}/console#%2f{{u.uuid}}" >{{u.id}}</a>, {{u.subject}} <br />
+     <span style="padding-left:20px;"></span> Owned by {{u.responsible}} <br />
        {% if u.message %}
-         <span style="padding-left:20px;"></span> {{u.message}} </br>
+         <span style="padding-left:20px;"></span> {{u.message}} <br />
        {% endif %}
    {% endfor %}
 {% else %}
@@ -17,14 +17,14 @@
 {% if ac %}
   <h4> Active cases:</h4>
   {% for case in ac %}
-    <span style="padding-left:20px;"></span> <a href ="{{url}}/console#%2f{{case.uuid}}" >{{case.id}}</a>, {{case.severity_level}}, {{case.subject}}, <i>{{case.responsible}}</i> </br>
+    <span style="padding-left:20px;"></span> <a href ="{{url}}/console#%2f{{case.uuid}}" >{{case.id}}</a>, {{case.severity_level}}, {{case.subject}}, <i>{{case.responsible}}</i> <br />
   {% endfor %}
 {% endif %}
 
 {% if engineers %}
-   </br>{{engineers}}
+   <br />{{engineers}}
 {% else %}
-   </br>No European engineers scheduled for {{date}} {{shift}}
+   <br />No European engineers scheduled for {{date}} {{shift}}
 {% endif %}
 
 
