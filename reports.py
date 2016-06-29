@@ -105,8 +105,7 @@ for engineer in duty(int(day), daytime) or []:
 for engineer in sf.query("SELECT name,id from User")['records']:
     sf_engineers.append({engineer['Id']: engineer['Name']})
 
-for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,status,OwnerID,Severity_Level__c,Subject,LastModifiedDate,LastModifiedById from Case where status = 'Open' or status = 'New' or status = 'Pending'")['records']:
-
+for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,status,OwnerID,Severity_Level__c,Subject,LastModifiedDate,LastModifiedById from Case where status = 'Open' or status = 'New' or status = 'Pending' or status = 'On Hold'")['records']:
     severity = case['Severity_Level__c']
     uuid = case['Id']
     status = case['Status']
@@ -132,7 +131,7 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
           case_owner = '[UNASSIGNED]'
 
 # process all new & open
-    if status not in 'Pending' and severity not in 'Sev 1':
+    if status in 'New' or status in 'Open' and severity not in 'Sev 1':
       case_meta = { 
           'id' : case_id,
           'status' : status,
@@ -144,7 +143,7 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
       active_cases.append(case_meta)
 
 # process recent SEV1's
-    if severity in 'Sev 1' and (time - datetime.strptime(modified, "%Y-%m-%dT%H:%M:%S")).seconds < 60*60*12:
+    if severity in 'Sev 1':
       sev1_meta = {
           'id' : case_id,
           'status' : status,
