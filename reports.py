@@ -1,6 +1,7 @@
+import httplib2
 from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
-from datetime import datetime
+from datetime import datetime, timedelta
 import xlrd
 import sys
 from jinja2 import Environment, PackageLoader
@@ -8,6 +9,10 @@ from engineers import engineers
 import sqlite3
 from lumpy import Mail
 from unidecode import unidecode
+from apiclient import discovery
+
+from calendarapi import get_credentials
+
 
 conn = sqlite3.connect('archive.db')
 c = conn.cursor()
@@ -29,7 +34,12 @@ sf_tkn = parser.get('SalesForce', 'token')
 sender_email = parser.get('EMail', 'sender')
 reciever_email = parser.get('EMail', 'reciever')
 
-sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
+calendar_id = parser.get('calendar', 'id')
+
+sf = Salesforce(custom_url=sf_url,
+                username=sf_usr,
+                password=sf_pwd,
+                security_token=sf_tkn)
 
 time = datetime.now()
 sf_engineers = []
@@ -71,6 +81,26 @@ def daynight(hour):
       day = 0
     return day
 
+def webexes():
+    w = []
+    credentials = get_credentials()
+    http = credentials.authorize(httplib2.Http())
+    service = discovery.build('calendar', 'v3', http=http)
+
+    now = datetime.utcnow().isoformat()+'Z'
+    then = (datetime.utcnow()+timedelta(hours=12)).isoformat()+'Z'
+
+    eventsResult = service.events().list(
+        calendarId=calendar_id, timeMin=now, singleEvents = True,
+        timeMax=then,orderBy='startTime').execute()
+    events = eventsResult.get('items', [])
+
+    for event in events:
+        time = event['start'].get('dateTime', '')[11:]
+        if 'webex' in event.get('location', '').lower() or 'webex' in event['summary'].lower():
+            w.append({'time': time,'title': event['summary']})
+    return w
+
 def sch():
     for rownum in range(sheet.nrows)[2:]:
       row = sheet.row_values(rownum)
@@ -109,10 +139,14 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
     severity = case['Severity_Level__c']
     uuid = case['Id']
     status = case['Status']
-    L2 = case['L2__c']
     case_id = case['CaseNumber']
     owner_id = case['OwnerId']
     modified = case['LastModifiedDate'].split('.')[0]
+
+    if case['L2__c']:
+       queue = 'L2' 
+    else:
+       queue = 'L1'
 
 # override empty subjects
     if case['Subject']:
@@ -150,14 +184,21 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
           'subject' : subject,
           'responsible' : case_owner,
           'message' : escalation_message,
-          'l2': L2,
+          'queue': queue,
           'uuid': uuid
           }
       active_sev1s.append(sev1_meta)
 
+
 template = env.get_template('report.html')
 
-message = template.render(urgent = active_sev1s, url=sf_url, ac=active_cases, engineers = next_on_duty, date = date, shift = daytime)
+message = template.render(urgent = active_sev1s,
+                          url=sf_url,
+                          ac=active_cases,
+                          engineers = next_on_duty,
+                          date = date,
+                          shift = daytime,
+                          webexes = webexes())
 
 c.execute("INSERT INTO reports VALUES(null, ?, ?, ?)",  (date, message.replace('\n', ''), daynight(datetime.now().hour)))
 

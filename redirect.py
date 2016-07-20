@@ -10,7 +10,7 @@ sf_usr = parser.get('SalesForce', 'username')
 sf_pwd = parser.get('SalesForce', 'password')
 sf_tkn = parser.get('SalesForce', 'token')
 
-sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
+#sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
 
 kvs = {}
 
@@ -21,6 +21,7 @@ def application(caseid):
     if caseid in kvs:
         url = sf_url + '/console#%2f' + kvs[caseid]
     else:
+        sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
         for case in sf.query("SELECT Id from Case where CaseNumber = '%d'" % int(caseid))['records']:
           kvs[caseid] = case['Id']
           url = sf_url + '/console#%2f' + case['Id']
