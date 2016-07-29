@@ -9,12 +9,17 @@ sf_url = parser.get('SalesForce', 'url')
 sf_usr = parser.get('SalesForce', 'username')
 sf_pwd = parser.get('SalesForce', 'password')
 sf_tkn = parser.get('SalesForce', 'token')
+favicn = parser.get('www', 'favicon')
 
 #sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
 
 kvs = {}
 
 app = Flask(__name__)
+
+@app.route('/case')
+def lalala():
+    return '<head><link rel="icon" type="image/x-icon"  href="'+favicn+'"></head><script type="text/javascript">function go(caseId) {window.location = window.location.href + "/" + caseId;return false;}</script><form method="post" onsubmit="return go(this.caseId.value);">Case number: <input type="text" name="caseId"><input type="submit" value="Go"></form>'
 
 @app.route('/case/<caseid>')
 def application(caseid):
