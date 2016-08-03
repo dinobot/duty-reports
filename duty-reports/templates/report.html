@@ -1,5 +1,17 @@
 <!DOCTYPE html>
 
+<script type="text/javascript">
+function shiftSubDiv(n)
+{
+  var el = document.getElementById('subDiv'+n);
+  if ( el.style.display == 'none' )
+    el.style.display = 'block'
+  else
+    if ( el.style.display == 'block' )
+    el.style.display = 'none';
+};
+</script>
+
 {% if webexes  %}
   <h3>Planned sessions:</h3>
   {% for webex in webexes %}
@@ -9,21 +21,25 @@
 
 {% if urgent %}
   <h3>Sev1 cases:</h3>  
+   {% set count = 1 %}
    {% for u in urgent %}
      <span style="padding-left:20px;"></span> Queue: {{u.queue}} <br />
      <span style="padding-left:20px;"></span> <a href ="{{url}}/console#%2f{{u.uuid}}" >{{u.id}}</a>, {{u.subject}} <br />
      <span style="padding-left:20px;"></span> Owned by {{u.responsible}} <br />
      {% if u.bug %}
-     <span style="padding-left:20px;"></span>linked bugs: <br />
+     <div class="navHeader" id="navHeader{{ count }}" onClick="shiftSubDiv({{ count }})"><span style="padding-left:20px;"></span> <font color="SlateBlue"> linked bugs </font> </div>
+     <ul id="subDiv{{ count }}" style="display:none">
        {% for bug in u.bug %}
          {% if bug %}
-             <span style="padding-left:40px;"></span> <a href = "{{bug}}"> {{bug}} </a><br />
+             <li> <a href = "{{bug}}"> {{bug}} </a></li>
          {% endif %}
        {% endfor %}
+     </ul>
      {% endif %}
        {% if u.message %}
          <span style="padding-left:20px;"></span> {{u.message}} <br />
        {% endif %}
+   {% set count = count + 1 %}
    {% endfor %}
 {% else %}
   Currently we have no SEV1 tickets

@@ -204,7 +204,6 @@ message = template.render(urgent = active_sev1s,
                           date = date,
                           shift = daytime,
                           webexes = webexes())
-
 c.execute("INSERT INTO reports VALUES(null, ?, ?, ?)",  (date, message.replace('\n', ''), daynight(datetime.now().hour)))
 
 conn.commit()
