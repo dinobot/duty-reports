@@ -135,14 +135,17 @@ for engineer in duty(int(day), daytime) or []:
 for engineer in sf.query("SELECT name,id from User")['records']:
     sf_engineers.append({engineer['Id']: engineer['Name']})
 
-for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,status,OwnerID,Severity_Level__c,Subject,LastModifiedDate,LastModifiedById from Case where status = 'Open' or status = 'New' or status = 'Pending' or status = 'On Hold'")['records']:
+for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time__c,status,OwnerID,Severity_Level__c,Subject,LastModifiedDate,LastModifiedById,Launch_Pad_URL_1__c,Launch_Pad_URL_2__c,Launch_Pad_URL_3__c,Launch_Pad_URL_4__c  from Case where status = 'Open' or status = 'New' or status = 'Pending' or status = 'On Hold'")['records']:
     severity = case['Severity_Level__c']
     uuid = case['Id']
     status = case['Status']
     case_id = case['CaseNumber']
     owner_id = case['OwnerId']
     modified = case['LastModifiedDate'].split('.')[0]
-
+    linked_bugs = []
+    if case['Launch_Pad_URL_1__c']:
+        for n in range(1,5):
+            linked_bugs.append(case['Launch_Pad_URL_'+str(n)+'__c'])
     if case['L2__c']:
        queue = 'L2' 
     else:
@@ -172,7 +175,8 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
           'severity_level' : severity,
           'subject' : subject,
           'responsible' : case_owner,
-          'uuid': uuid
+          'uuid': uuid,
+          'bug': linked_bugs
           }
       active_cases.append(case_meta)
 
@@ -185,7 +189,8 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
           'responsible' : case_owner,
           'message' : escalation_message,
           'queue': queue,
-          'uuid': uuid
+          'uuid': uuid,
+          'bug': linked_bugs
           }
       active_sev1s.append(sev1_meta)
 

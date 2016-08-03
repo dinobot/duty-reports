@@ -3,7 +3,7 @@
 {% if webexes  %}
   <h3>Planned sessions:</h3>
   {% for webex in webexes %}
-     <span style="padding-left:20px;"></span> <b>{{webex.time}}</b>, {{webex.title}} <br />
+     <span style="padding-left:20px;"></span> {{webex.title}} <br />
   {% endfor %}
 {% endif %}
 
@@ -13,6 +13,14 @@
      <span style="padding-left:20px;"></span> Queue: {{u.queue}} <br />
      <span style="padding-left:20px;"></span> <a href ="{{url}}/console#%2f{{u.uuid}}" >{{u.id}}</a>, {{u.subject}} <br />
      <span style="padding-left:20px;"></span> Owned by {{u.responsible}} <br />
+     {% if u.bug %}
+     <span style="padding-left:20px;"></span>linked bugs: <br />
+       {% for bug in u.bug %}
+         {% if bug %}
+             <span style="padding-left:40px;"></span> <a href = "{{bug}}"> {{bug}} </a><br />
+         {% endif %}
+       {% endfor %}
+     {% endif %}
        {% if u.message %}
          <span style="padding-left:20px;"></span> {{u.message}} <br />
        {% endif %}
