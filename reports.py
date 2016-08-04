@@ -2,6 +2,7 @@ import httplib2
 from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
 from datetime import datetime, timedelta
+import time
 import xlrd
 import sys
 from jinja2 import Environment, PackageLoader
@@ -41,7 +42,7 @@ sf = Salesforce(custom_url=sf_url,
                 password=sf_pwd,
                 security_token=sf_tkn)
 
-time = datetime.now()
+time = time.strftime("%H:%M")
 sf_engineers = []
 active_cases = []
 active_sev1s = []
@@ -202,12 +203,14 @@ message = template.render(urgent = active_sev1s,
                           ac=active_cases,
                           engineers = next_on_duty,
                           date = date,
+                          time = time,
                           shift = daytime,
                           webexes = webexes())
-c.execute("INSERT INTO reports VALUES(null, ?, ?, ?)",  (date, message.replace('\n', ''), daynight(datetime.now().hour)))
+print "<center><h1>STO Duty Report, %s</h1></center>" % reverse_daytime(daytime)
+print message
 
+c.execute("INSERT INTO reports VALUES(null, ?, ?, ?)",  (date, message.replace('\n', ''), daynight(datetime.now().hour)))
 conn.commit()
 conn.close()
-
 m = Mail(reciever_email, sender=sender_email, subject = 'Duty report, %s, %s' % (reverse_daytime(daytime), date), body=message, content = 'html')
 m.send()

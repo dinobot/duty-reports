@@ -24,10 +24,10 @@ function shiftSubDiv(n)
    {% set count = 1 %}
    {% for u in urgent %}
      <span style="padding-left:20px;"></span> Queue: {{u.queue}} <br />
-     <span style="padding-left:20px;"></span> <a href ="{{url}}/console#%2f{{u.uuid}}" >{{u.id}}</a>, {{u.subject}} <br />
-     <span style="padding-left:20px;"></span> Owned by {{u.responsible}} <br />
+     <span style="padding-left:30px;"></span> <a href ="{{url}}/console#%2f{{u.uuid}}" >{{u.id}}</a>, {{u.subject}} <br />
+     <span style="padding-left:30px;"></span> Owned by {{u.responsible}} <br />
      {% if u.bug %}
-     <div class="navHeader" id="navHeader{{ count }}" onClick="shiftSubDiv({{ count }})"><span style="padding-left:20px;"></span> <font color="SlateBlue"> linked bugs </font> </div>
+     <div class="navHeader" id="navHeader{{ count }}" onClick="shiftSubDiv({{ count }})"><span style="padding-left:30px;"></span> <font color="SlateBlue"> linked bugs </font> </div>
      <ul id="subDiv{{ count }}" style="display:none">
        {% for bug in u.bug %}
          {% if bug %}
@@ -37,7 +37,7 @@ function shiftSubDiv(n)
      </ul>
      {% endif %}
        {% if u.message %}
-         <span style="padding-left:20px;"></span> {{u.message}} <br />
+         <span style="padding-left:30px;"></span> {{u.message}} <br />
        {% endif %}
    {% set count = count + 1 %}
    {% endfor %}
@@ -59,4 +59,4 @@ function shiftSubDiv(n)
 {% endif %}
 
 
-<p style="font-size:small;-webkit-text-size-adjust:none;color:#666;">&mdash;This is an automatic email</p>
+<p style="font-size:small;-webkit-text-size-adjust:none;color:#666;">&mdash;Automatic report. {{date}}, {{time}} UTC</p>
