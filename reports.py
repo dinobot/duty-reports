@@ -11,6 +11,7 @@ import sqlite3
 from lumpy import Mail
 from unidecode import unidecode
 from apiclient import discovery
+import pytz
 
 from calendarapi import get_credentials
 
@@ -83,7 +84,9 @@ def daynight(hour):
     return day
 
 def webexes():
+    utc = pytz.utc
     w = []
+    zone = 'Etc/GMT-10'
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
     service = discovery.build('calendar', 'v3', http=http)
@@ -97,9 +100,13 @@ def webexes():
     events = eventsResult.get('items', [])
 
     for event in events:
-        time = event['start'].get('dateTime', '')[11:]
+        start = event['start'].get('dateTime', event['start'].get('date'))[11:16]
+        end = event['end'].get('dateTime', event['end'].get('date'))[11:16]
         if 'webex' in event.get('location', '').lower() or 'webex' in event['summary'].lower():
-            w.append({'time': time,'title': event['summary']})
+            w.append({'title': event['summary'],
+                      'start': str(utc.localize(datetime.strptime(start, "%H:%M")).astimezone(pytz.timezone(zone)))[11:16],
+                      'end': str(utc.localize(datetime.strptime(end, "%H:%M")).astimezone(pytz.timezone(zone)))[11:16]
+                     })
     return w
 
 def sch():
