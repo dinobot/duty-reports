@@ -189,7 +189,7 @@ for case in sf.query("SELECT Id,CaseNumber,L2__c,Summary__c,SLA_resolution_time_
       active_cases.append(case_meta)
 
 # process recent SEV1's
-    if severity in 'Sev 1':
+    if isinstance(severity, str) and severity in 'Sev 1':
       sev1_meta = {
           'id' : case_id,
           'status' : status,
