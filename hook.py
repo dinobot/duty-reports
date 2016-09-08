@@ -21,16 +21,18 @@ app = Flask(__name__)
 def application():
     caseid = request.args.get('text', '')
     if caseid in kvs:
-        url = sf_url + '/console#%2f' + kvs[caseid]
+        url = sf_url + '/console#%2f' + kvs[caseid].get('id')
+        title = kvs[caseid].get('title')
     else:
         sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
-        for case in sf.query("SELECT Id from Case where CaseNumber = '%d'" % int(caseid))['records']:
-          kvs[caseid] = case['Id']
+        for case in sf.query("SELECT Id, Subject from Case where CaseNumber = '%d'" % int(caseid))['records']:
+          kvs[caseid] = {'id': case['Id'], 'title': case['Subject']}
           url = sf_url + '/console#%2f' + case['Id']
-    return '{"response_type": "in_channel", "attachments": [{"title": "'+caseid+'","title_link": "'+url+'",}]}', 200, {'Content-Type': 'application/json'}
+          title = case['Subject']
+    return '{"response_type": "in_channel", "attachments": [{"title": "'+title+'","title_link": "'+url+'",}]}', 200, {'Content-Type': 'application/json'}
 
 @app.errorhandler(500)
 def err(e):
     return 'no such case, sorry', 500
 
-app.run(host='0.0.0.0', port=5001)
+app.run(host='127.0.0.1', port=5001)
