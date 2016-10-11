@@ -21,15 +21,24 @@ app = Flask(__name__)
 def application():
     caseid = request.args.get('text', '')
     if caseid in kvs:
-        url = sf_url + '/console#%2f' + kvs[caseid].get('id')
+        url = kvs[caseid].get('url')
         title = kvs[caseid].get('title')
+        severity = kvs[caseid].get('severity')
+        customer = kvs[caseid].get('customer')
     else:
         sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
-        for case in sf.query("SELECT Id, Subject from Case where CaseNumber = '%d'" % int(caseid))['records']:
-          kvs[caseid] = {'id': case['Id'], 'title': case['Subject']}
-          url = sf_url + '/console#%2f' + case['Id']
+        for case in sf.query("SELECT Id, Subject, Severity_Level__c, AccountId from Case where CaseNumber = '%d'" % int(caseid))['records']:
           title = case['Subject']
-    return '{"response_type": "in_channel", "attachments": [{"title": "'+title+'","title_link": "'+url+'",}]}', 200, {'Content-Type': 'application/json'}
+          customer = sf.account.get(case['AccountId'])['Name']
+          severity = case['Severity_Level__c']
+          url = sf_url + '/console#%2f' + case['Id']
+          kvs[caseid] = {'id': case['Id'],
+                         'title': title,
+                         'customer': customer,
+                         'severity': severity,
+                         'url': url}
+
+    return '{"response_type": "in_channel", "attachments": [{"title": "'+title+'", "title_link": "'+url+'","fields": [{"title": "'+customer+'", "value":"'+severity+'"}]}]}', 200, {'Content-Type': 'application/json'}
 
 @app.errorhandler(500)
 def err(e):
