@@ -13,7 +13,7 @@ function shiftSubDiv(n)
 </script>
 
 {% if webexes  %}
-  <h3>Planned sessions (MSK):</h3>
+  <h3>Planned sessions (!!! UTC):</h3>
   {% for webex in webexes %}
      <span style="padding-left:20px;"></span><b>{{webex.start}}-{{webex.end}}</b> {{webex.title}} <br />
   {% endfor %}

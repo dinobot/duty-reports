@@ -96,7 +96,7 @@ def webexes():
 
     eventsResult = service.events().list(
         calendarId=calendar_id, timeMin=now, singleEvents = True,
-        timeMax=then,orderBy='startTime').execute()
+        timeMax=then,orderBy='startTime',timeZone="UTC").execute()
     events = eventsResult.get('items', [])
 
     for event in events:
@@ -104,8 +104,8 @@ def webexes():
         end = event['end'].get('dateTime', event['end'].get('date'))[11:16]
         if 'webex' in event.get('location', '').lower() or 'webex' in event['summary'].lower():
             w.append({'title': event['summary'],
-                      'start': str(utc.localize(datetime.strptime(start, "%H:%M")).astimezone(pytz.timezone(zone)))[11:16],
-                      'end': str(utc.localize(datetime.strptime(end, "%H:%M")).astimezone(pytz.timezone(zone)))[11:16]
+                      'start': str(utc.localize(datetime.strptime(start, "%H:%M")))[11:16],
+                      'end': str(utc.localize(datetime.strptime(end, "%H:%M")))[11:16]
                      })
     return w
 
