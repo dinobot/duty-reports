@@ -15,30 +15,29 @@ favicn = parser.get('www', 'favicon')
 
 kvs = {}
 
+def prepare_json_data(json_data):
+    json_data_string = ''
+    for c in json_data:
+      if c in '{}["]':
+        c = ' '
+      json_data_string = json_data_string + c
+    return json_data_string
+
 app = Flask(__name__)
 
 @app.route('/', methods=['GET'])
 def application():
     caseid = request.args.get('text', '')
     if caseid in kvs:
-        url = kvs[caseid].get('url')
+        url = sf_url + '/console#%2f' + kvs[caseid].get('id')
         title = kvs[caseid].get('title')
-        severity = kvs[caseid].get('severity')
-        customer = kvs[caseid].get('customer')
     else:
         sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
-        for case in sf.query("SELECT Id, Subject, Severity_Level__c, AccountId from Case where CaseNumber = '%d'" % int(caseid))['records']:
-          title = case['Subject']
-          customer = sf.account.get(case['AccountId'])['Name']
-          severity = case['Severity_Level__c']
+        for case in sf.query("SELECT Id, Subject from Case where CaseNumber = '%d'" % int(caseid))['records']:
+          kvs[caseid] = {'id': case['Id'], 'title': prepare_json_data(case['Subject'])}
           url = sf_url + '/console#%2f' + case['Id']
-          kvs[caseid] = {'id': case['Id'],
-                         'title': title,
-                         'customer': customer,
-                         'severity': severity,
-                         'url': url}
-
-    return '{"response_type": "in_channel", "attachments": [{"title": "'+title+'", "title_link": "'+url+'","fields": [{"title": "'+customer+'", "value":"'+severity+'"}]}]}', 200, {'Content-Type': 'application/json'}
+          title = prepare_json_data(case['Subject'])
+    return '{"response_type": "in_channel", "attachments": [{"title": "'+title+'","title_link": "'+url+'",}]}', 200, {'Content-Type': 'application/json'}
 
 @app.errorhandler(500)
 def err(e):
