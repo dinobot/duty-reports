@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     respond = ''
 
-    for k in sorted(data, key=lambda k: len(data[k]), reverse=True):
+    for k in sorted(data, key=lambda k: len(data[k]), reverse=False):
       respond += '*'+k+'*'+' : '+', '.join(data[k])+'  `'+str(len(data[k]))+'`'+str('\n')
 
 
@@ -106,4 +106,4 @@ if __name__ == '__main__':
 
     return json.dumps(r), 200, {'Content-Type': 'application/json'}
 
-  app.run()
+  app.run(host='127.0.0.1', port=5002)
