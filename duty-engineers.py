@@ -27,7 +27,6 @@ cal_id = parser.get('calendar', 'id')
 credentials = get_credentials()
 http = credentials.authorize(httplib2.Http())
 service = discovery.build('calendar', 'v3', http=http)
-res = {}
 
 class Config(object):
     JOBS = [
@@ -35,7 +34,7 @@ class Config(object):
             'id': 'job1',
             'func': 'duty-engineers:async_job',
             'trigger': 'interval',
-            'seconds': 60
+            'seconds': 90
         }
     ]
 
@@ -48,7 +47,7 @@ def async_job():
                   security_token=sf_tkn)
 
   now  = (datetime.utcnow()).isoformat()+'Z'
-  then = (datetime.utcnow()+timedelta(minutes=10)).isoformat()+'Z'
+  then = (datetime.utcnow()+timedelta(minutes=1)).isoformat()+'Z'
 
   eventsResult = service.events().list(
       calendarId=cal_id, timeMin=now, singleEvents = True,
@@ -62,6 +61,8 @@ def async_job():
       if key not in kvs:
         kvs.append(key)
 
+  res = {}
+
   for k in kvs:
     res[engineers[k]] = []
     for case in sf.query("SELECT CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed'")['records']:
@@ -70,6 +71,7 @@ def async_job():
   os.environ['JSON_RESULT'] = str(json.dumps(res))
 
 async_job()
+print('app ready!')
 
 if __name__ == '__main__':
   app = Flask(__name__)
@@ -86,7 +88,6 @@ if __name__ == '__main__':
       us= int(us.rstrip("Z"), 10)
       return dt + timedelta(microseconds=us)
 
-
     data = json.loads(os.environ['JSON_RESULT'])
     stamp = gt(data['timestamp'])
     del data['timestamp']
@@ -95,7 +96,6 @@ if __name__ == '__main__':
 
     for k in sorted(data, key=lambda k: len(data[k]), reverse=False):
       respond += '*'+k+'*'+' : '+', '.join(data[k])+'  `'+str(len(data[k]))+'`'+str('\n')
-
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
