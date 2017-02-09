@@ -65,7 +65,7 @@ def async_job():
 
   for k in kvs:
     res[engineers[k]] = []
-    for case in sf.query("SELECT CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed'")['records']:
+    for case in sf.query("SELECT CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
       res[engineers[k]].append(case['CaseNumber'])
   res['timestamp'] = now
   os.environ['JSON_RESULT'] = str(json.dumps(res))
