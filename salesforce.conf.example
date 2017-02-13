@@ -4,6 +4,9 @@ username =
 password =
 token =
 
+[Slack]
+monitor_hook_url =
+
 [EMail]
 reciever =
 sender =
