@@ -31,6 +31,14 @@ def slack_send(username, icon_emoji, text):
     conn.close()
     return res.status, res.reason
 
+def prepare_json_data(json_data):
+    json_data_string = ''
+    for c in json_data:
+      if c in '{}["]':
+        c = ' '
+      json_data_string = json_data_string + c
+    return json_data_string
+
 while True:
     for t in ntickets:
         ntickets[t]['stillnew'] = False
@@ -56,7 +64,7 @@ while True:
         else:
             print("Found new ticket, recording and notifying (%s: %s)" % (case['CaseNumber'], case['Subject']))
 
-            ntickets[case['Id']] = {'title': case['Subject'], 'url': sf_url + '/console#%2f' + case['Id'], 'wait': 0, 'stillnew': True}
+            ntickets[case['Id']] = {'title': prepare_json_data(case['Subject']), 'url': sf_url + '/console#%2f' + case['Id'], 'wait': 0, 'stillnew': True}
             url = sf_url + '/console#%2f' + case['Id']
 
             slack_send("New Ticket Notification",
