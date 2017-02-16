@@ -3,9 +3,17 @@ from time import sleep
 from json import dumps
 from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
+from optparse import OptionParser
+
+oparser = OptionParser()
+oparser.add_option('-c', '--config', dest='conffile', help='path to config file', metavar='FILENAME')
+(options, args) = oparser.parse_args()
 
 parser = SafeConfigParser()
-parser.read('salesforce.conf')
+if options.conffile is not None:
+    parser.read(options.conffile)
+else:
+    parser.read('salesforce.conf')
 
 sf_url = parser.get('SalesForce', 'url')
 sf_usr = parser.get('SalesForce', 'username')
