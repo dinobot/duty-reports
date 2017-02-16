@@ -3,6 +3,7 @@ from time import sleep
 from json import dumps
 from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
+from engineers import engineers, ids
 
 parser = SafeConfigParser()
 parser.read('salesforce.conf')
@@ -64,7 +65,7 @@ while True:
         else:
             print("Found new ticket, recording and notifying (%s: %s)" % (case['CaseNumber'], case['Subject']))
 
-            ntickets[case['Id']] = {'title': prepare_json_data(case['Subject']), 'url': sf_url + '/console#%2f' + case['Id'], 'wait': 0, 'stillnew': True}
+            ntickets[case['Id']] = {'title': prepare_json_data(case['Subject']), 'url': sf_url + '/console#%2f' + case['Id'], 'wait': 0, 'stillnew': True, 'uid': case['Id']}
             url = sf_url + '/console#%2f' + case['Id']
 
             slack_send("New Ticket Notification",
@@ -76,6 +77,21 @@ while True:
     to_del = []
     for t in ntickets:
         if not ntickets[t]['stillnew']:
+
+            owner_id = sf.query("SELECT OwnerId from Case where Id = '"+str(ntickets[t]['uid'])+"'")['records'].pop().get('OwnerId', None)
+            for email, user_id in ids.iteritems():
+                if owner_id == user_id:
+                    case_owner = engineers[email]
+                    break
+                else:
+                    case_owner = None
+
+            slack_send("Case assigned",
+                       ":ticket:",
+                       "A new ticket %s is assigned to %s" %
+                       (ntickets[case['Id']]['title'], case_owner)
+                       )
+
             to_del.append(t)
     for t in to_del:
         del ntickets[t]
