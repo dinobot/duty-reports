@@ -45,7 +45,11 @@ while True:
 
     for case in sf.query("SELECT Id, Subject, Severity_Level__c, CaseNumber from Case where Status = 'New'")['records']:
         if case['Id'] in ntickets:
-            nsev = int(case['Severity_Level__c'][-1])
+            if case['Severity_Level__c'] is not None:
+                nsev = int(case['Severity_Level__c'][-1])
+            else:
+                print("%s is an alert and has no severity. Treating as Sev3" % case['CaseNumber'])
+                nsev = 3
             ntickets[case['Id']]['stillnew'] = True
             ntickets[case['Id']]['wait'] += 5
             if ntickets[case['Id']]['wait'] >= sev_wait[nsev-1]:
