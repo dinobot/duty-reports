@@ -4,9 +4,18 @@ from json import dumps
 from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
 from engineers import engineers, ids
+from optparse import OptionParser
+
+oparser = OptionParser()
+oparser.add_option('-c', '--config', dest='conffile', help='path to config file', metavar='FILENAME')
+(options, args) = oparser.parse_args()
 
 parser = SafeConfigParser()
-parser.read('salesforce.conf')
+
+if options.conffile is not None:
+    parser.read(options.conffile)
+else:
+    parser.read('salesforce.conf')
 
 sf_url = parser.get('SalesForce', 'url')
 sf_usr = parser.get('SalesForce', 'username')
@@ -20,7 +29,6 @@ ntickets = {}
 
 sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
 
-
 def slack_send(username, icon_emoji, text):
     params = dumps({"username": username,
                     "icon_emoji": icon_emoji,
@@ -32,13 +40,15 @@ def slack_send(username, icon_emoji, text):
     conn.close()
     return res.status, res.reason
 
+
 def prepare_json_data(json_data):
     json_data_string = ''
     for c in json_data:
-      if c in '{}["]':
-        c = ' '
-      json_data_string = json_data_string + c
+        if c in '{}["]':
+            c = ' '
+        json_data_string = json_data_string + c
     return json_data_string
+
 
 while True:
     for t in ntickets:
@@ -46,7 +56,11 @@ while True:
 
     for case in sf.query("SELECT Id, Subject, Severity_Level__c, CaseNumber from Case where Status = 'New'")['records']:
         if case['Id'] in ntickets:
-            nsev = int(case['Severity_Level__c'][-1])
+            if case['Severity_Level__c'] is not None:
+                nsev = int(case['Severity_Level__c'][-1])
+            else:
+                print("%s is an alert and has no severity. Treating as Sev3" % case['CaseNumber'])
+                nsev = 3
             ntickets[case['Id']]['stillnew'] = True
             ntickets[case['Id']]['wait'] += 5
             if ntickets[case['Id']]['wait'] >= sev_wait[nsev-1]:
@@ -88,7 +102,7 @@ while True:
 
             slack_send("Case assigned",
                        ":ticket:",
-                       "A new ticket %s is assigned to %s" %
+                       "Case %s has been assigned to %s" %
                        (ntickets[case['Id']]['title'], case_owner)
                        )
 
