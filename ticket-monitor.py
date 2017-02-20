@@ -99,8 +99,8 @@ while True:
 
             slack_send("Case assigned",
                        ":ticket:",
-                       "Case %s has been assigned to %s" %
-                       (ntickets[case['Id']]['title'], case_owner)
+                       "Case \"%s\" has been assigned to %s" %
+                       (ntickets[t]['title'], case_owner)
                        )
 
             to_del.append(t)
