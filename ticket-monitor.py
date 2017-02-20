@@ -41,15 +41,6 @@ def slack_send(username, icon_emoji, text):
     return res.status, res.reason
 
 
-def prepare_json_data(json_data):
-    json_data_string = ''
-    for c in json_data:
-        if c in '{}["]':
-            c = ' '
-        json_data_string = json_data_string + c
-    return json_data_string
-
-
 while True:
     for t in ntickets:
         ntickets[t]['stillnew'] = False
@@ -77,16 +68,22 @@ while True:
                 print("Still new ticket, but too early to notify again (waited %d out of %d)... Sev %d, (%s: %s)" %
                       (ntickets[case['Id']]['wait'], sev_wait[nsev-1], nsev, case['CaseNumber'], case['Subject']))
         else:
-            print("Found new ticket, recording and notifying (%s: %s)" % (case['CaseNumber'], case['Subject']))
+            if case['Subject'] is not None:
+                print("Found new ticket, recording and notifying (%s: %s)" % (case['CaseNumber'], case['Subject']))
 
-            ntickets[case['Id']] = {'title': prepare_json_data(case['Subject']), 'url': sf_url + '/console#%2f' + case['Id'], 'wait': 0, 'stillnew': True, 'uid': case['Id']}
-            url = sf_url + '/console#%2f' + case['Id']
+                ntickets[case['Id']] = {'title': str(case['Subject']).translate(None,'{}["]'),
+                                        'url': sf_url + '/console#%2f' + case['Id'],
+                                        'wait': 0, 'stillnew': True, 'uid': case['Id']}
 
-            slack_send("New Ticket Notification",
-                       ":ticket:",
-                       "A new %s ticket is here! #%s <%s|%s>" %
-                       (case['Severity_Level__c'], case['CaseNumber'], ntickets[case['Id']]['url'], ntickets[case['Id']]['title'])
-                       )
+                url = sf_url + '/console#%2f' + case['Id']
+
+                slack_send("New Ticket Notification",
+                           ":ticket:",
+                           "A new %s ticket is here! #%s <%s|%s>" %
+                           (case['Severity_Level__c'], case['CaseNumber'], ntickets[case['Id']]['url'], ntickets[case['Id']]['title'])
+                           )
+            else:
+                continue
 
     to_del = []
     for t in ntickets:
