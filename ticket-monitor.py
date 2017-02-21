@@ -5,6 +5,7 @@ from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
 from engineers import engineers, ids
 from optparse import OptionParser
+from unidecode import unidecode
 
 oparser = OptionParser()
 oparser.add_option('-c', '--config', dest='conffile', help='path to config file', metavar='FILENAME')
@@ -71,7 +72,7 @@ while True:
             if case['Subject'] is not None:
                 print("Found new ticket, recording and notifying (%s: %s)" % (case['CaseNumber'], case['Subject']))
 
-                ntickets[case['Id']] = {'title': str(case['Subject']).translate(None,'{}["]'),
+                ntickets[case['Id']] = {'title': unidecode(case['Subject']).translate(None,'{}["]'),
                                         'url': sf_url + '/console#%2f' + case['Id'],
                                         'wait': 0, 'stillnew': True, 'uid': case['Id']}
 
@@ -93,14 +94,14 @@ while True:
             for email, user_id in ids.iteritems():
                 if owner_id == user_id:
                     case_owner = engineers[email]
+                    message = "Case \"%s\" has been assigned to %s" % (ntickets[t]['title'], case_owner)
                     break
                 else:
-                    case_owner = None
+                    message = "Case \"%s\" has been assigned" % ntickets[t]['title']
 
             slack_send("Case assigned",
                        ":ticket:",
-                       "Case \"%s\" has been assigned to %s" %
-                       (ntickets[t]['title'], case_owner)
+                       message
                        )
 
             to_del.append(t)
