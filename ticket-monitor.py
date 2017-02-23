@@ -1,7 +1,7 @@
 import httplib
 import urllib
 from time import sleep
-from json import dumps
+from json import dumps, loads
 from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
 from engineers import engineers, ids
@@ -62,7 +62,7 @@ while True:
                       (nsev, ntickets[case['Id']]['wait'], case['CaseNumber'], case['Subject']))
                 try:
                     url = urllib.urlopen(shift_url)
-                    stats=jslon.loads(url.read())
+                    stats = loads(url.read())
                     if len(stats) > 1:
                         del(stats['timestamp'])
                         suggest = sorted(stats, key=lambda k: len(stats[k]), reverse=False)[0]
