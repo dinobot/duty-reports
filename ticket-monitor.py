@@ -1,4 +1,5 @@
 import httplib
+import urllib
 from time import sleep
 from json import dumps
 from ConfigParser import SafeConfigParser
@@ -22,6 +23,7 @@ sf_usr = parser.get('SalesForce', 'username')
 sf_pwd = parser.get('SalesForce', 'password')
 sf_tkn = parser.get('SalesForce', 'token')
 slack_hook = parser.get('Slack', 'monitor_hook_url')
+shift_url = parser.get('misc', 'shift_status_json_url')
 
 sev_wait = [5, 20, 40, 80]
 
@@ -66,12 +68,26 @@ while True:
             if ntickets[case['Id']]['wait'] >= sev_wait[nsev-1]:
                 print("A Sev %d ticket is still new (%d min since last notification), sending notification again (%s: %s)" %
                       (nsev, ntickets[case['Id']]['wait'], case['CaseNumber'], case['Subject']))
-
+                try:
+                    url = urllib.urlopen(shift_url)
+                    stats=jslon.loads(url.read())
+                    if len(stats) > 1:
+                        del(stats['timestamp'])
+                        suggest = sorted(stats, key=lambda k: len(stats[k]), reverse=False)[0]
+                        message = "<!here> %s should take care of %s.  <%s|%s>" % (suggest,
+                                                                                   case['CaseNumber'],
+                                                                                   ntickets[case['Id']]['url'],
+                                                                                   ntickets[case['Id']]['title'])
+                except:
+                    message = "<!here> A %s ticket is still New! #%s <%s|%s>" % (case['Severity_Level__c'],
+                                                                                 case['CaseNumber'],
+                                                                                 ntickets[case['Id']]['url'],
+                                                                                 ntickets[case['Id']]['title'])
                 slack_send("New Ticket Warning",
                            ":warning:",
-                           "<!here> A %s ticket is still New! #%s <%s|%s>" %
-                           (case['Severity_Level__c'], case['CaseNumber'], ntickets[case['Id']]['url'], ntickets[case['Id']]['title'])
+                           message
                            )
+
                 ntickets[case['Id']]['wait'] = 0
             else:
                 print("Still new ticket, but too early to notify again (waited %d out of %d)... Sev %d, (%s: %s)" %

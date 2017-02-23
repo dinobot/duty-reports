@@ -16,3 +16,6 @@ id =
 
 [www]
 favicon =
+
+[misc]
+shift_status_json_url =

@@ -79,6 +79,10 @@ if __name__ == '__main__':
   scheduler = APScheduler()
   scheduler.init_app(app)
   scheduler.start()
+  @app.route('/json')
+  def handle():
+    return os.environ['JSON_RESULT']
+
   @app.route('/', methods=['GET'])
   def application():
 
