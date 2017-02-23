@@ -6,6 +6,7 @@ from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
 from engineers import engineers, ids
 from optparse import OptionParser
+from unidecode import unidecode
 
 oparser = OptionParser()
 oparser.add_option('-c', '--config', dest='conffile', help='path to config file', metavar='FILENAME')
@@ -41,15 +42,6 @@ def slack_send(username, icon_emoji, text):
     res = conn.getresponse()
     conn.close()
     return res.status, res.reason
-
-
-def prepare_json_data(json_data):
-    json_data_string = ''
-    for c in json_data:
-        if c in '{}["]':
-            c = ' '
-        json_data_string = json_data_string + c
-    return json_data_string
 
 
 while True:
@@ -93,16 +85,22 @@ while True:
                 print("Still new ticket, but too early to notify again (waited %d out of %d)... Sev %d, (%s: %s)" %
                       (ntickets[case['Id']]['wait'], sev_wait[nsev-1], nsev, case['CaseNumber'], case['Subject']))
         else:
-            print("Found new ticket, recording and notifying (%s: %s)" % (case['CaseNumber'], case['Subject']))
+            if case['Subject'] is not None:
+                print("Found new ticket, recording and notifying (%s: %s)" % (case['CaseNumber'], case['Subject']))
 
-            ntickets[case['Id']] = {'title': prepare_json_data(case['Subject']), 'url': sf_url + '/console#%2f' + case['Id'], 'wait': 0, 'stillnew': True, 'uid': case['Id']}
-            url = sf_url + '/console#%2f' + case['Id']
+                ntickets[case['Id']] = {'title': unidecode(case['Subject']).translate(None,'{}["]'),
+                                        'url': sf_url + '/console#%2f' + case['Id'],
+                                        'wait': 0, 'stillnew': True, 'uid': case['Id']}
 
-            slack_send("New Ticket Notification",
-                       ":ticket:",
-                       "A new %s ticket is here! #%s <%s|%s>" %
-                       (case['Severity_Level__c'], case['CaseNumber'], ntickets[case['Id']]['url'], ntickets[case['Id']]['title'])
-                       )
+                url = sf_url + '/console#%2f' + case['Id']
+
+                slack_send("New Ticket Notification",
+                           ":ticket:",
+                           "A new %s ticket is here! #%s <%s|%s>" %
+                           (case['Severity_Level__c'], case['CaseNumber'], ntickets[case['Id']]['url'], ntickets[case['Id']]['title'])
+                           )
+            else:
+                continue
 
     to_del = []
     for t in ntickets:
@@ -112,14 +110,14 @@ while True:
             for email, user_id in ids.iteritems():
                 if owner_id == user_id:
                     case_owner = engineers[email]
+                    message = "Case \"%s\" has been assigned to %s" % (ntickets[t]['title'], case_owner)
                     break
                 else:
-                    case_owner = None
+                    message = "Case \"%s\" has been assigned" % ntickets[t]['title']
 
             slack_send("Case assigned",
                        ":ticket:",
-                       "A new ticket %s is assigned to %s" %
-                       (ntickets[case['Id']]['title'], case_owner)
+                       message
                        )
 
             to_del.append(t)
