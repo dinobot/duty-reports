@@ -23,6 +23,7 @@ sf_usr = parser.get('SalesForce', 'username')
 sf_pwd = parser.get('SalesForce', 'password')
 sf_tkn = parser.get('SalesForce', 'token')
 slack_hook = parser.get('Slack', 'monitor_hook_url')
+poll_rate = int(parser.get('misc', 'monitor_poll_minutes'))
 shift_url = parser.get('misc', 'shift_status_json_url')
 
 sev_wait = [5, 20, 40, 80]
@@ -55,7 +56,7 @@ while True:
                 print("%s is an alert and has no severity. Treating as Sev3" % case['CaseNumber'])
                 nsev = 3
             ntickets[case['Id']]['stillnew'] = True
-            ntickets[case['Id']]['wait'] += 5
+            ntickets[case['Id']]['wait'] += poll_rate
             if ntickets[case['Id']]['wait'] >= sev_wait[nsev-1]:
                 print("A Sev %d ticket is still new (%d min since last notification), sending notification again (%s: %s)" %
                       (nsev, ntickets[case['Id']]['wait'], case['CaseNumber'], case['Subject']))
@@ -124,5 +125,5 @@ while True:
         del ntickets[t]
     del to_del
 
-    print("Sleeping 5 minutes...")
-    sleep(300)
+    print("Sleeping %d minutes..." % poll_rate)
+    sleep(poll_rate * 60)
