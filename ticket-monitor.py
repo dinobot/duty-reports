@@ -4,7 +4,6 @@ from time import sleep
 from json import dumps, loads
 from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
-from engineers import engineers, ids
 from optparse import OptionParser
 from unidecode import unidecode
 
@@ -105,22 +104,22 @@ while True:
     to_del = []
     for t in ntickets:
         if not ntickets[t]['stillnew']:
-
             owner_id = sf.query("SELECT OwnerId from Case where Id = '"+str(ntickets[t]['uid'])+"'")['records'].pop().get('OwnerId', None)
-            for email, user_id in ids.iteritems():
-                if owner_id == user_id:
-                    case_owner = engineers[email]
-                    message = "Case \"%s\" has been assigned to %s" % (ntickets[t]['title'], case_owner)
-                    break
-                else:
-                    message = "Case \"%s\" has been assigned" % ntickets[t]['title']
 
-            slack_send("Case assigned",
-                       ":ticket:",
+            owner = None
+            for user in sf.query("SELECT Name FROM User WHERE Id = '%s'" % owner_id)['records']:
+                owner = user['Name']
+            for group in sf.query("SELECT Name FROM Group WHERE Id = '%s'" % owner_id)['records']:
+                owner = group['Name']
+
+            message = "Case #%s <%s|%s> moved from New (assigned to *%s*)" % (case['CaseNumber'], ntickets[case['Id']]['url'], ntickets[case['Id']]['title'], owner)
+            slack_send("Case Handled",
+                       ":ok:",
                        message
                        )
 
             to_del.append(t)
+
     for t in to_del:
         del ntickets[t]
     del to_del
