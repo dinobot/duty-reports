@@ -48,7 +48,7 @@ while True:
     for t in ntickets:
         ntickets[t]['stillnew'] = False
 
-    for case in sf.query("SELECT Id, Subject, Severity_Level__c, CaseNumber from Case where Status = 'New'")['records']:
+    for case in sf.query("SELECT Id, Subject, Severity_Level__c, CaseNumber, AccountId from Case where Status = 'New'")['records']:
         if case['Id'] in ntickets:
             if case['Severity_Level__c'] is not None:
                 nsev = int(case['Severity_Level__c'][-1])
@@ -66,13 +66,15 @@ while True:
                     if len(stats) > 1:
                         del(stats['timestamp'])
                         suggest = sorted(stats, key=lambda k: len(stats[k]), reverse=False)[0]
-                        message = "<!here> %s should take care of %s.  <%s|%s>" % (suggest,
+                        message = "<!here> %s might want to take care of #*%s* [_%s_] <%s|%s> as it is stil New!" % (suggest,
                                                                                    case['CaseNumber'],
+                                                                                   ntickets[case['Id']]['customer'],
                                                                                    ntickets[case['Id']]['url'],
                                                                                    ntickets[case['Id']]['title'])
                 except:
-                    message = "<!here> A %s ticket is still New! #%s <%s|%s>" % (case['Severity_Level__c'],
+                    message = "<!here> A %s ticket is still New! #*%s* [_%s_] <%s|%s>" % (case['Severity_Level__c'],
                                                                                  case['CaseNumber'],
+                                                                                 ntickets[case['Id']]['customer'],
                                                                                  ntickets[case['Id']]['url'],
                                                                                  ntickets[case['Id']]['title'])
                 slack_send("New Ticket Warning",
@@ -88,16 +90,23 @@ while True:
             if case['Subject'] is not None:
                 print("Found new ticket, recording and notifying (%s: %s)" % (case['CaseNumber'], case['Subject']))
 
+                customer = None
+                for account in sf.query("SELECT Name FROM Account WHERE Id = '%s'" % case['AccountId'])['records']:
+                    customer = account['Name']
+                if customer is not None:
+                    print("Determined customer: %s" % customer)
+
                 ntickets[case['Id']] = {'title': unidecode(case['Subject']).translate(None,'{}["]'),
                                         'url': sf_url + '/console#%2f' + case['Id'],
-                                        'wait': 0, 'stillnew': True, 'uid': case['Id']}
+                                        'wait': 0, 'stillnew': True, 'uid': case['Id'], 'customer': customer,
+                                        'number': case['CaseNumber']}
 
                 url = sf_url + '/console#%2f' + case['Id']
 
                 slack_send("New Ticket Notification",
                            ":ticket:",
-                           "A new %s ticket is here! #%s <%s|%s>" %
-                           (case['Severity_Level__c'], case['CaseNumber'], ntickets[case['Id']]['url'], ntickets[case['Id']]['title'])
+                           "A new %s ticket is here! #*%s* [_%s_] <%s|%s>" %
+                           (case['Severity_Level__c'], case['CaseNumber'], ntickets[case['Id']]['customer'], ntickets[case['Id']]['url'], ntickets[case['Id']]['title'])
                            )
             else:
                 continue
@@ -113,7 +122,15 @@ while True:
             for group in sf.query("SELECT Name FROM Group WHERE Id = '%s'" % owner_id)['records']:
                 owner = group['Name']
 
-            message = "Case #%s <%s|%s> moved from New (assigned to *%s*)" % (case['CaseNumber'], ntickets[case['Id']]['url'], ntickets[case['Id']]['title'], owner)
+            print("%s is not new anymore. Removing and notifying" % ntickets[t]['title'])
+
+            message = "Case #*%s* [_%s_] <%s|%s> moved from New (assigned to *%s*)" % (
+                      ntickets[t]['number'],
+                      ntickets[t]['customer'],
+                      ntickets[t]['url'],
+                      ntickets[t]['title'],
+                      owner
+                      )
             slack_send("Case Handled",
                        ":ok:",
                        message
