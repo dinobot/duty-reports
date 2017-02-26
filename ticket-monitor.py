@@ -7,11 +7,13 @@ from simple_salesforce import Salesforce
 from optparse import OptionParser
 from unidecode import unidecode
 
+# Adding command line parameters
 oparser = OptionParser()
 oparser.add_option('-c', '--config', dest='conffile',
                    help='path to config file', metavar='FILENAME')
 (options, args) = oparser.parse_args()
 
+# Reading and parsing configuration
 parser = SafeConfigParser()
 
 if options.conffile is not None:
@@ -27,14 +29,18 @@ slack_hook = parser.get('Slack', 'monitor_hook_url')
 poll_rate = int(parser.get('misc', 'monitor_poll_minutes'))
 shift_url = parser.get('misc', 'shift_status_json_url')
 
+# Wait times in minutes for Sev 1, 2, 3 and 4
+# respectively before notifying again
 sev_wait = [5, 20, 40, 80]
 
 ntickets = {}
 
+# Opening session with SalesForce
 sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd,
                 security_token=sf_tkn)
 
 
+# A function for sending messages to Slack incoming hook
 def slack_send(username, icon_emoji, text):
     params = dumps({"username": username,
                     "icon_emoji": icon_emoji,
@@ -47,23 +53,34 @@ def slack_send(username, icon_emoji, text):
     return res.status, res.reason
 
 
+# Main loop for processing tickets
 while True:
+    # In case we don't find some known tickets in the list,
+    # we mark them as not new anymore
     for t in ntickets:
         ntickets[t]['stillnew'] = False
 
+    # Searching for all tickets with "New" status and processing
     for case in sf.query(("SELECT Id, Subject, Severity_Level__c, "
                           "CaseNumber, AccountId FROM Case WHERE "
                           "Status = 'New'"))['records']:
         if case['Id'] in ntickets:
+            # If the ticket is already already known...
+
             if case['Severity_Level__c'] is not None:
                 nsev = int(case['Severity_Level__c'][-1])
             else:
                 print("%s is an alert and has no severity. Treating as Sev3" %
                       case['CaseNumber'])
                 nsev = 3
+
             ntickets[case['Id']]['stillnew'] = True
             ntickets[case['Id']]['wait'] += poll_rate
+
             if ntickets[case['Id']]['wait'] >= sev_wait[nsev-1]:
+                # The ticket was new for longer than it should have been.
+                # Notifying again!
+
                 print(("A Sev %d ticket is still new (%d min since last "
                        "notification), sending notification again (%s: %s)") %
                       (nsev,
@@ -71,6 +88,9 @@ while True:
                        case['CaseNumber'],
                        case['Subject']))
                 try:
+                    # Trying to get information about current workload
+                    # from another script and suggest engineers...
+
                     url = urllib.urlopen(shift_url)
                     stats = loads(url.read())
                     if len(stats) > 1:
@@ -85,6 +105,8 @@ while True:
                                    ntickets[case['Id']]['title'],
                                    suggest)
                 except:
+                    # If getting suggestion fails, sending simple notification
+
                     message = ("<!here> A %s ticket is still New! #*%s* "
                                "<%s|%s>") % (case['Severity_Level__c'],
                                              case['CaseNumber'],
@@ -98,6 +120,9 @@ while True:
 
                 ntickets[case['Id']]['wait'] = 0
             else:
+                # The ticket has not been waiting enough
+                # to be notified about again.
+
                 print(("Still new ticket, but too early to notify again "
                        "(waited %d out of %d)... Sev %d, (%s: %s)") %
                       (ntickets[case['Id']]['wait'],
@@ -106,10 +131,13 @@ while True:
                        case['CaseNumber'],
                        case['Subject']))
         else:
-            if case['Subject'] is not None:
+            # If this is a new ticket we don't know yet about...
+
+            if case['Subject'] is not None:        # Preventing TypeError crash
                 print("Found new ticket, recording and notifying (%s: %s)" %
                       (case['CaseNumber'], case['Subject']))
 
+                # Looking up the customer's name
                 customer = None
                 for account in sf.query(("SELECT Name FROM Account "
                                          "WHERE Id = '%s'") %
@@ -118,6 +146,7 @@ while True:
                 if customer is not None:
                     print("Determined customer: %s" % customer)
 
+                # Recording some ticket info for later use
                 ntickets[case['Id']] = {'title':
                                         unidecode(case['Subject']).
                                         translate(None, '{}["]'),
@@ -128,8 +157,7 @@ while True:
                                         'customer': customer,
                                         'number': case['CaseNumber']}
 
-                url = sf_url + '/console#%2f' + case['Id']
-
+                # Finally, sending notification
                 slack_send("New Ticket Notification",
                            ":ticket:",
                            "A new %s ticket is here! #*%s* [_%s_] <%s|%s>" %
@@ -142,13 +170,14 @@ while True:
             else:
                 continue
 
+    # Searching for tickets that were moved from "New"
     to_del = []
     for t in ntickets:
         if not ntickets[t]['stillnew']:
+            # Determining assignee name (user or group)
             owner_id = sf.query("SELECT OwnerId FROM Case WHERE Id = '%s'" %
                                 str(ntickets[t]['uid'])
                                 )['records'].pop().get('OwnerId', None)
-
             owner = None
             for user in sf.query("SELECT Name FROM User WHERE Id = '%s'" %
                                  owner_id)['records']:
@@ -160,6 +189,7 @@ while True:
             print("%s is not new anymore. Removing and notifying" %
                   ntickets[t]['title'])
 
+            # Sending notification about ticket being handled
             message = "Case #*%s* <%s|%s> moved FROM New (assigned to *%s*)" %\
                       (ntickets[t]['number'],
                        ntickets[t]['url'],
@@ -172,6 +202,7 @@ while True:
 
             to_del.append(t)
 
+    # Finally, removing not "New" tickets from memory
     for t in to_del:
         del ntickets[t]
     del to_del
