@@ -204,8 +204,7 @@ while True:
 
     # Finally, removing not "New" tickets from memory
     for t in to_del:
-        del ntickets[t]
-    del to_del
+        ntickets.pop(t)
 
     print("Sleeping %d minutes..." % poll_rate)
     sleep(poll_rate * 60)
