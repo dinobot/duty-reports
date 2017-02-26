@@ -52,7 +52,7 @@ while True:
         ntickets[t]['stillnew'] = False
 
     for case in sf.query(("SELECT Id, Subject, Severity_Level__c, "
-                          "CaseNumber, AccountId from Case where "
+                          "CaseNumber, AccountId FROM Case WHERE "
                           "Status = 'New'"))['records']:
         if case['Id'] in ntickets:
             if case['Severity_Level__c'] is not None:
@@ -145,7 +145,7 @@ while True:
     to_del = []
     for t in ntickets:
         if not ntickets[t]['stillnew']:
-            owner_id = sf.query("SELECT OwnerId from Case where Id = '%s'" %
+            owner_id = sf.query("SELECT OwnerId FROM Case WHERE Id = '%s'" %
                                 str(ntickets[t]['uid'])
                                 )['records'].pop().get('OwnerId', None)
 
@@ -160,7 +160,7 @@ while True:
             print("%s is not new anymore. Removing and notifying" %
                   ntickets[t]['title'])
 
-            message = "Case #*%s* <%s|%s> moved from New (assigned to *%s*)" %\
+            message = "Case #*%s* <%s|%s> moved FROM New (assigned to *%s*)" %\
                       (ntickets[t]['number'],
                        ntickets[t]['url'],
                        ntickets[t]['title'],
