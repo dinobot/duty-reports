@@ -95,13 +95,12 @@ while True:
                     stats = loads(url.read())
                     if len(stats) > 1:
                         del(stats['timestamp'])
-                        suggest = ', '.join(sorted(stats, key=lambda k:
-                                            len(stats[k]), reverse=False)[0:3])
-                        message = ("<!here> %s #*%s* <%s|%s> is still New! "
-                                   "Possible owners: %s") %\
-                                  (case['Severity_Level__c'],
-                                   case['CaseNumber'],
-                                   ntickets[case['Id']]['url'],
+                        suggest = ' or '.join(sorted(stats, key=lambda k:
+                                              len(stats[k]),
+                                              reverse=False)[0:2])
+                        message = ("<!here> <%s|%s>:"
+                                   " %s can take care of it.") % \
+                                  (ntickets[case['Id']]['url'],
                                    ntickets[case['Id']]['title'],
                                    suggest)
                 except:
@@ -113,7 +112,9 @@ while True:
                                              ntickets[case['Id']]['url'],
                                              ntickets[case['Id']]['title'])
 
-                slack_send("New Ticket Warning",
+                title = "%s #%s" % (case['Severity_Level__c'],
+                                   case['CaseNumber'])
+                slack_send(title,
                            ":warning:",
                            message
                            )
@@ -158,15 +159,14 @@ while True:
                                         'number': case['CaseNumber']}
 
                 # Finally, sending notification
-                slack_send("New Ticket Notification",
+                title = "%s filed case #%s" % (ntickets[case['Id']]['customer'],
+                                          case['CaseNumber'])
+                message = "<%s|%s> (%s)" % (ntickets[case['Id']]['url'],
+                                          ntickets[case['Id']]['title'],
+                                          case['Severity_Level__c'])
+                slack_send(title,
                            ":ticket:",
-                           "A new %s ticket is here! #*%s* [_%s_] <%s|%s>" %
-                           (case['Severity_Level__c'],
-                            case['CaseNumber'],
-                            ntickets[case['Id']]['customer'],
-                            ntickets[case['Id']]['url'],
-                            ntickets[case['Id']]['title'])
-                           )
+                           message)
             else:
                 continue
 
@@ -189,13 +189,14 @@ while True:
             print("%s is not new anymore. Removing and notifying" %
                   ntickets[t]['title'])
 
+            title = "#%s processed" % ntickets[t]['number']
+
             # Sending notification about ticket being handled
-            message = "Case #*%s* <%s|%s> moved FROM New (assigned to *%s*)" %\
-                      (ntickets[t]['number'],
-                       ntickets[t]['url'],
+            message = "<%s|%s> assigned to *%s*." % \
+                      (ntickets[t]['url'],
                        ntickets[t]['title'],
                        owner)
-            slack_send("Case Handled",
+            slack_send(title,
                        ":ok:",
                        message
                        )
