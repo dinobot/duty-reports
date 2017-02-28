@@ -134,7 +134,8 @@ while True:
         else:
             # If this is a new ticket we don't know yet about...
 
-            if case['Subject'] is not None:        # Preventing TypeError crash
+            if case['Subject'] is not None and \
+              case['AccountId'] is not None:  # Preventing TypeError crash
                 print("Found new ticket, recording and notifying (%s: %s)" %
                       (case['CaseNumber'], case['Subject']))
 
@@ -159,8 +160,7 @@ while True:
                                         'number': case['CaseNumber']}
 
                 # Finally, sending notification
-                title = "%s filed case #%s" % (ntickets[case['Id']]['customer'],
-                                          case['CaseNumber'])
+                title = "%s filed case #%s" % (customer, case['CaseNumber'])
                 message = "<%s|%s> (%s)" % (ntickets[case['Id']]['url'],
                                           ntickets[case['Id']]['title'],
                                           case['Severity_Level__c'])
