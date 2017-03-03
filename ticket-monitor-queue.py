@@ -199,4 +199,4 @@ while True:
         ntickets.pop(t)
 
     print("Sleeping %d minutes..." % poll_rate)
-    #sleep(poll_rate * 60)
+    sleep(poll_rate * 60)
