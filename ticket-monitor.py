@@ -113,7 +113,7 @@ while True:
                                              ntickets[case['Id']]['title'])
 
                 title = "%s #%s" % (case['Severity_Level__c'],
-                                   case['CaseNumber'])
+                                    case['CaseNumber'])
                 slack_send(title,
                            ":warning:",
                            message
@@ -162,8 +162,8 @@ while True:
                 # Finally, sending notification
                 title = "%s filed case #%s" % (customer, case['CaseNumber'])
                 message = "<%s|%s> (%s)" % (ntickets[case['Id']]['url'],
-                                          ntickets[case['Id']]['title'],
-                                          case['Severity_Level__c'])
+                                            ntickets[case['Id']]['title'],
+                                            case['Severity_Level__c'])
                 slack_send(title,
                            ":ticket:",
                            message)
