@@ -85,7 +85,8 @@ while True:
             ntickets[case['Id']]['wait'] += poll_rate
 
             if ntickets[case['Id']]['wait'] >= sev_wait[nsev-1]:
-                # The ticket was in the queue for longer than it should have been.
+                # The ticket was in the queue for
+                # longer than it should have been.
                 # Notifying again!
 
                 print(("A Sev %d ticket is still in '%s' (%d min since last "
@@ -97,8 +98,8 @@ while True:
 
                 message = ("<!here> No one took "
                            "<%s|%s> still!") %\
-                           (ntickets[case['Id']]['url'],
-                            ntickets[case['Id']]['title'])
+                          (ntickets[case['Id']]['url'],
+                           ntickets[case['Id']]['title'])
 
                 title = "[%s] %s #%s" %\
                         (monitor_group_name,
@@ -153,8 +154,8 @@ while True:
                 title = "[%s] #%s by [%s]" % (monitor_group_name,
                                               case['CaseNumber'], customer)
                 message = "<%s|%s> (%s)" % (ntickets[case['Id']]['url'],
-                                          ntickets[case['Id']]['title'],
-                                          case['Severity_Level__c'])
+                                            ntickets[case['Id']]['title'],
+                                            case['Severity_Level__c'])
                 slack_send(title,
                            ":ticket:",
                            message)
@@ -178,7 +179,7 @@ while True:
                 owner = group['Name']
 
             print("%s is not in '%s' anymore. Removing and notifying" %
-                  ntickets[t]['title'], monitor_group_name)
+                  (ntickets[t]['title'], monitor_group_name))
 
             title = "#%s processed" % ntickets[t]['number']
 
