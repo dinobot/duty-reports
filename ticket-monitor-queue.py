@@ -36,7 +36,7 @@ sev_wait = [5, 20, 40, 80]
 ntickets = {}
 
 # Opening session with SalesForce
-sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd,
+sf = Salesforce(instance_url=sf_url, username=sf_usr, password=sf_pwd,
                 security_token=sf_tkn)
 
 for group in sf.query("SELECT Id FROM Group WHERE Name = '%s'" %

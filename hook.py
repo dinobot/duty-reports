@@ -11,7 +11,7 @@ sf_pwd = parser.get('SalesForce', 'password')
 sf_tkn = parser.get('SalesForce', 'token')
 favicn = parser.get('www', 'favicon')
 
-#sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
+#sf = Salesforce(instance_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
 
 kvs = {}
 
@@ -32,7 +32,7 @@ def application():
         url = sf_url + '/console#%2f' + kvs[caseid].get('id')
         title = kvs[caseid].get('title')
     else:
-        sf = Salesforce(custom_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
+        sf = Salesforce(instance_url=sf_url, username=sf_usr, password=sf_pwd, security_token=sf_tkn)
         for case in sf.query("SELECT Id, Subject from Case where CaseNumber = '%d'" % int(caseid))['records']:
           kvs[caseid] = {'id': case['Id'], 'title': prepare_json_data(case['Subject'])}
           url = sf_url + '/console#%2f' + case['Id']
