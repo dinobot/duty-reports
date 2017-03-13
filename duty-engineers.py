@@ -41,7 +41,7 @@ class Config(object):
     SCHEDULER_API_ENABLED = True
 
 def async_job():
-  sf = Salesforce(custom_url=sf_url,
+  sf = Salesforce(instance_url=sf_url,
                   username=sf_usr,
                   password=sf_pwd,
                   security_token=sf_tkn)

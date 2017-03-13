@@ -38,7 +38,7 @@ reciever_email = parser.get('EMail', 'reciever')
 
 calendar_id = parser.get('calendar', 'id')
 
-sf = Salesforce(custom_url=sf_url,
+sf = Salesforce(instance_url=sf_url,
                 username=sf_usr,
                 password=sf_pwd,
                 security_token=sf_tkn)
