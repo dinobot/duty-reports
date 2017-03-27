@@ -2,7 +2,7 @@ import httplib2
 from apiclient import discovery
 from datetime import datetime, timedelta
 from calendarapi import get_credentials
-from engineers import engineers, ids
+from engineers import engineers, ids, l2
 from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
 from flask import Flask, request
@@ -62,12 +62,25 @@ def async_job():
         kvs.append(key)
 
   res = {}
+  l2_crew = {}
+
+  for e in l2:
+    e_day = datetime.now(l2[e]['tz']).strftime('%A')
+    e_hour = int(datetime.now(l2[e]['tz']).strftime('%H'))
+
+    if (e_day != 'Sunday' or e_day != 'Saturday'):
+      if (e_hour >= 9) and (e_hour <= 17 ):
+        l2_crew[e] = []
+        for c in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
+          l2_crew[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
 
   for k in kvs:
     res[engineers[k]] = []
     for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
       res[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
+
   res['timestamp'] = now
+  res['l2'] = l2_crew
   os.environ['JSON_RESULT'] = str(json.dumps(res))
 
 async_job()
@@ -94,19 +107,29 @@ if __name__ == '__main__':
 
     data = json.loads(os.environ['JSON_RESULT'])
     stamp = gt(data['timestamp'])
+    l2 = data['l2']
+
+    del data['l2']
     del data['timestamp']
 
-    respond = ''
+    payload  = ''
+    extra = ''
 
     for k in sorted(data, key=lambda k: len(data[k]), reverse=False):
-      respond += '*'+k+'*'+' : '+', '.join(data[k])+'  `'+str(len(data[k]))+'`'+str('\n')
+      payload += k+' : '+', '.join(data[k])+'  `'+str(len(data[k]))+'`'+str('\n')
+
+    for e in sorted(l2, key=lambda e: len(l2[e]), reverse=False):
+      extra += e+' : '+', '.join(l2[e])+'  `'+str(len(l2[e]))+'`'+str('\n')
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
 
     r = {}
     r['response_type'] = 'in_channel'
-    r['text'] = respond
+    if l2:
+      r['text'] = '*#   L1:   # * \n' + payload + '*#   L2:   # * \n' + extra
+    else:
+      r['text'] = '*#   L1:   # * \n' + payload
 
     return json.dumps(r), 200, {'Content-Type': 'application/json'}
 
