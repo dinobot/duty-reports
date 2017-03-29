@@ -62,6 +62,7 @@ def async_job():
         kvs.append(key)
 
   res = {}
+  l1_crew = {}
   l2_crew = {}
 
   for e in l2:
@@ -75,11 +76,12 @@ def async_job():
           l2_crew[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
 
   for k in kvs:
-    res[engineers[k]] = []
+    l1_crew[engineers[k]] = []
     for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
-      res[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
+      l1_crew[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
 
   res['timestamp'] = now
+  res['l1'] = l1_crew
   res['l2'] = l2_crew
   os.environ['JSON_RESULT'] = str(json.dumps(res))
 
@@ -92,44 +94,57 @@ if __name__ == '__main__':
   scheduler = APScheduler()
   scheduler.init_app(app)
   scheduler.start()
+
+  def gt(dt_str):
+    dt, _, us= dt_str.partition(".")
+    dt= datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S")
+    us= int(us.rstrip("Z"), 10)
+    return dt + timedelta(microseconds=us)
+
   @app.route('/json')
   def handle():
     return os.environ['JSON_RESULT']
 
-  @app.route('/', methods=['GET'])
-  def application():
-
-    def gt(dt_str):
-      dt, _, us= dt_str.partition(".")
-      dt= datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S")
-      us= int(us.rstrip("Z"), 10)
-      return dt + timedelta(microseconds=us)
-
+  @app.route('/extra', methods=['GET'])
+  def l2_stats():
     data = json.loads(os.environ['JSON_RESULT'])
-    stamp = gt(data['timestamp'])
-    l2 = data['l2']
-
-    del data['l2']
-    del data['timestamp']
-
-    payload  = ''
+    l2_stats = data['l2']
     extra = ''
+    stamp = gt(data['timestamp'])
 
-    for k in sorted(data, key=lambda k: len(data[k]), reverse=False):
-      payload += k+' : '+', '.join(data[k])+'  `'+str(len(data[k]))+'`'+str('\n')
-
-    for e in sorted(l2, key=lambda e: len(l2[e]), reverse=False):
-      extra += e+' : '+', '.join(l2[e])+'  `'+str(len(l2[e]))+'`'+str('\n')
+    if not l2_stats:
+      extra = 'No engineers on-duty: L2 escalations team available only at 9:00-17:00 MSK/EEST/PDT'
+    else:
+      for e in sorted(l2_stats, key=lambda e: len(l2_stats[e]), reverse=False):
+        extra +='*'+e+'*'+' : '+', '.join(l2_stats[e])+'  `'+str(len(l2_stats[e]))+'`'+str('\n')
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
 
     r = {}
     r['response_type'] = 'in_channel'
-    if l2:
-      r['text'] = '*#   L1:   # * \n' + payload + '*#   L2:   # * \n' + extra
-    else:
-      r['text'] = '*#   L1:   # * \n' + payload
+    r['text'] = extra
+
+    return json.dumps(r), 200, {'Content-Type': 'application/json'}
+
+  @app.route('/', methods=['GET'])
+  def application():
+
+    data = json.loads(os.environ['JSON_RESULT'])
+    l1_stats = data['l1']
+    stamp = gt(data['timestamp'])
+
+    payload  = ''
+
+    for k in sorted(l1_stats, key=lambda k: len(l1_stats[k]), reverse=False):
+      payload += '*'+k+'*'+' : '+', '.join(l1_stats[k])+'  `'+str(len(l1_stats[k]))+'`'+str('\n')
+
+    if stamp < datetime.utcnow()-timedelta(minutes=5):
+      return 'app cache outdated', 500
+
+    r = {}
+    r['response_type'] = 'in_channel'
+    r['text'] = payload
 
     return json.dumps(r), 200, {'Content-Type': 'application/json'}
 
