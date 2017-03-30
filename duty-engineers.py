@@ -103,7 +103,9 @@ if __name__ == '__main__':
 
   @app.route('/json')
   def handle():
-    return os.environ['JSON_RESULT']
+    data = json.loads(os.environ['JSON_RESULT'])
+    crew = data['l1']
+    return str(json.dumps(crew))
 
   @app.route('/extra', methods=['GET'])
   def l2_stats():
