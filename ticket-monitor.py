@@ -94,7 +94,6 @@ while True:
                     url = urllib.urlopen(shift_url)
                     stats = loads(url.read())
                     if len(stats) > 1:
-                        del(stats['timestamp'])
                         suggest = ' or '.join(sorted(stats, key=lambda k:
                                               len(stats[k]),
                                               reverse=False)[0:2])
