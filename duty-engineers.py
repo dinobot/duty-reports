@@ -10,6 +10,7 @@ import json
 import time
 from flask_apscheduler import APScheduler
 import os
+import xlrd
 
 import logging
 logging.basicConfig()
@@ -80,9 +81,16 @@ def async_job():
     for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
       l1_crew[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
 
+  on_duty = ''
+  sheet = xlrd.open_workbook('l2.xlsx').sheet_by_index(2)
+  for i in xrange(sheet.nrows):
+    if sheet.row_values(i)[5] == 'YES':
+      on_duty+= str(sheet.row_values(i)[2])
+
   res['timestamp'] = now
   res['l1'] = l1_crew
   res['l2'] = l2_crew
+  res['od'] = on_duty
   os.environ['JSON_RESULT'] = str(json.dumps(res))
 
 async_job()
@@ -111,14 +119,17 @@ if __name__ == '__main__':
   def l2_stats():
     data = json.loads(os.environ['JSON_RESULT'])
     l2_stats = data['l2']
+    l2_on_duty = data['od']
     extra = ''
     stamp = gt(data['timestamp'])
 
-    if not l2_stats:
-      extra = 'No engineers on-duty: L2 escalations team available only at 9:00-17:00 MSK/EEST/PDT'
-    else:
+    if l2_stats:
       for e in sorted(l2_stats, key=lambda e: len(l2_stats[e]), reverse=False):
         extra +='*'+e+'*'+' : '+', '.join(l2_stats[e])+'  `'+str(len(l2_stats[e]))+'`'+str('\n')
+    elif l2_on_duty:
+      extra = l2_on_duty+' is on duty. \n The remaining team will be available soon.'
+    else:
+      extra  = 'No engineers on-duty: L2 escalations team available only at 9:00-17:00 MSK/EEST/PDT'
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
