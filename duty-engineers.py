@@ -1,7 +1,7 @@
 import httplib2
 from apiclient import discovery
 from datetime import datetime, timedelta
-from calendarapi import get_credentials
+from calendarapihelper import get_credentials
 from engineers import engineers, ids, l2
 from ConfigParser import SafeConfigParser
 from simple_salesforce import Salesforce
@@ -50,21 +50,27 @@ def async_job():
   now  = (datetime.utcnow()).isoformat()+'Z'
   then = (datetime.utcnow()+timedelta(minutes=1)).isoformat()+'Z'
 
+  sheet = xlrd.open_workbook('l2.xlsx').sheet_by_index(2)
+
   eventsResult = service.events().list(
       calendarId=cal_id, timeMin=now, singleEvents = True,
       timeMax=then,orderBy='startTime',
       timeZone="UTC").execute()
   events = eventsResult.get('items', [])
-  kvs = []
+
+  result = {}
+  l1_crew = {}
+  l2_crew = {}
+  email2name = []
+  on_duty = ''
+  l2_unassigned = []
+  l1_unassigned = []
+
   for event in events:
     if 'shift' in event['summary']:
       key = event['attendees'].pop()['email']
-      if key not in kvs:
-        kvs.append(key)
-
-  res = {}
-  l1_crew = {}
-  l2_crew = {}
+      if key not in email2name:
+        email2name.append(key)
 
   for e in l2:
     e_day = datetime.now(l2[e]['tz']).strftime('%A')
@@ -76,22 +82,28 @@ def async_job():
         for c in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
           l2_crew[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
 
-  for k in kvs:
+  for k in email2name:
     l1_crew[engineers[k]] = []
     for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
       l1_crew[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
 
-  on_duty = ''
-  sheet = xlrd.open_workbook('l2.xlsx').sheet_by_index(2)
+  for case in sf.query("SELECT Id, CaseNumber from Case where OwnerId = '00GE0000003YOIEMA4' and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
+    l1_unassigned.append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
+
+  for case in sf.query("SELECT Id, CaseNumber from Case where OwnerId = '00GE0000003YOIFMA4' and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
+    l2_unassigned.append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
+
   for i in xrange(sheet.nrows):
     if sheet.row_values(i)[5] == 'YES':
       on_duty+= str(sheet.row_values(i)[2])
 
-  res['timestamp'] = now
-  res['l1'] = l1_crew
-  res['l2'] = l2_crew
-  res['od'] = on_duty
-  os.environ['JSON_RESULT'] = str(json.dumps(res))
+  result['timestamp'] = now
+  result['l1'] = l1_crew
+  result['l2'] = l2_crew
+  result['od'] = on_duty
+  result['l1u'] = l1_unassigned
+  result['l2u'] = l2_unassigned
+  os.environ['JSON_RESULT'] = str(json.dumps(result))
 
 async_job()
 print('app ready!')
@@ -109,6 +121,15 @@ if __name__ == '__main__':
     us= int(us.rstrip("Z"), 10)
     return dt + timedelta(microseconds=us)
 
+  def ustring(udict):
+    prefix = ''
+    for k in udict:
+      if len(udict)>1:
+        prefix+=k + ' ,'
+      else:
+        prefix = k
+    return prefix
+
   @app.route('/json')
   def handle():
     data = json.loads(os.environ['JSON_RESULT'])
@@ -123,6 +144,8 @@ if __name__ == '__main__':
     extra = ''
     stamp = gt(data['timestamp'])
 
+    prefix = ustring(data['l2u'])
+
     if l2_stats:
       for e in sorted(l2_stats, key=lambda e: len(l2_stats[e]), reverse=False):
         extra +='*'+e+'*'+' : '+', '.join(l2_stats[e])+'  `'+str(len(l2_stats[e]))+'`'+str('\n')
@@ -136,18 +159,19 @@ if __name__ == '__main__':
 
     r = {}
     r['response_type'] = 'in_channel'
-    r['text'] = extra
+    r['text'] = 'Unassigned: '+prefix+'\n' + extra if prefix else extra
 
     return json.dumps(r), 200, {'Content-Type': 'application/json'}
 
   @app.route('/', methods=['GET'])
-  def application():
+  def l1_stats():
 
     data = json.loads(os.environ['JSON_RESULT'])
     l1_stats = data['l1']
     stamp = gt(data['timestamp'])
 
     payload  = ''
+    prefix = ustring(data['l1u'])
 
     for k in sorted(l1_stats, key=lambda k: len(l1_stats[k]), reverse=False):
       payload += '*'+k+'*'+' : '+', '.join(l1_stats[k])+'  `'+str(len(l1_stats[k]))+'`'+str('\n')
@@ -157,7 +181,7 @@ if __name__ == '__main__':
 
     r = {}
     r['response_type'] = 'in_channel'
-    r['text'] = payload
+    r['text'] = 'Unassigned: '+prefix+'\n' + payload if prefix else payload
 
     return json.dumps(r), 200, {'Content-Type': 'application/json'}
 
