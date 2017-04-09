@@ -76,7 +76,7 @@ def async_job():
     e_day = datetime.now(l2[e]['tz']).strftime('%A')
     e_hour = int(datetime.now(l2[e]['tz']).strftime('%H'))
 
-    if (e_day != 'Sunday' or e_day != 'Saturday'):
+    if (e_day != 'Sunday' and e_day != 'Saturday'):
       if (e_hour >= 9) and (e_hour <= 17 ):
         l2_crew[e] = []
         for c in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
