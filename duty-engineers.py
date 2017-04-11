@@ -121,20 +121,13 @@ if __name__ == '__main__':
     us= int(us.rstrip("Z"), 10)
     return dt + timedelta(microseconds=us)
 
-  def ustring(udict):
-    prefix = ''
-    for k in udict:
-      if len(udict)>1:
-        prefix+=k + ' ,'
-      else:
-        prefix = k
-    return prefix
-
   @app.route('/json')
-  def handle():
-    data = json.loads(os.environ['JSON_RESULT'])
-    crew = data['l1']
-    return str(json.dumps(crew))
+  def l1_handle():
+    return str(json.dumps(json.loads(os.environ['JSON_RESULT'])['l1']))
+
+  @app.route('/jsonl2')
+  def l2_handle():
+    return str(json.dumps(json.loads(os.environ['JSON_RESULT'])['l2']))
 
   @app.route('/extra', methods=['GET'])
   def l2_stats():
@@ -143,8 +136,7 @@ if __name__ == '__main__':
     l2_on_duty = data['od']
     extra = ''
     stamp = gt(data['timestamp'])
-
-    prefix = ustring(data['l2u'])
+    prefix = ', '.join(data['l2u'])
 
     if l2_stats:
       for e in sorted(l2_stats, key=lambda e: len(l2_stats[e]), reverse=False):
@@ -169,9 +161,8 @@ if __name__ == '__main__':
     data = json.loads(os.environ['JSON_RESULT'])
     l1_stats = data['l1']
     stamp = gt(data['timestamp'])
-
     payload  = ''
-    prefix = ustring(data['l1u'])
+    prefix = ', '.join(data['l1u'])
 
     for k in sorted(l1_stats, key=lambda k: len(l1_stats[k]), reverse=False):
       payload += '*'+k+'*'+' : '+', '.join(l1_stats[k])+'  `'+str(len(l1_stats[k]))+'`'+str('\n')
