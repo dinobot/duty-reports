@@ -61,16 +61,16 @@ def async_job():
   result = {}
   l1_crew = {}
   l2_crew = {}
-  email2name = []
-  on_duty = ''
+  crew_keys = []
+  on_duty_l2 = ''
   l2_unassigned = []
   l1_unassigned = []
 
   for event in events:
     if 'shift' in event['summary']:
       key = event['attendees'].pop()['email']
-      if key not in email2name:
-        email2name.append(key)
+      if key not in crew_keys:
+        crew_keys.append(key)
 
   for e in l2:
     e_day = datetime.now(l2[e]['tz']).strftime('%A')
@@ -82,7 +82,7 @@ def async_job():
         for c in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
           l2_crew[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
 
-  for k in email2name:
+  for k in crew_keys:
     l1_crew[engineers[k]] = []
     for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
       l1_crew[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
@@ -95,12 +95,12 @@ def async_job():
 
   for i in xrange(sheet.nrows):
     if sheet.row_values(i)[5] == 'YES':
-      on_duty+= str(sheet.row_values(i)[2])
+      on_duty_l2+= str(sheet.row_values(i)[2])
 
   result['timestamp'] = now
   result['l1'] = l1_crew
   result['l2'] = l2_crew
-  result['od'] = on_duty
+  result['od2'] = on_duty_l2
   result['l1u'] = l1_unassigned
   result['l2u'] = l2_unassigned
   os.environ['JSON_RESULT'] = str(json.dumps(result))
@@ -121,6 +121,21 @@ if __name__ == '__main__':
     us= int(us.rstrip("Z"), 10)
     return dt + timedelta(microseconds=us)
 
+  def dict2message(d):
+    message = ''
+    for e in sorted(d, key=lambda e: len(d[e]), reverse=False):
+      message +='*'+e+'*'+' : '+', '.join(d[e])+'  `'+str(len(d[e]))+'`'+str('\n')
+    return message
+
+  def process_l2(l2_stats, l2_on_duty):
+    if l2_stats:
+      extra = dict2message(l2_stats)
+    elif l2_on_duty:
+      extra = l2_on_duty+' is on duty. \n The remaining team will be available soon.'
+    else:
+      extra  = 'No engineers on-duty: L2 escalations team available only at 9:00-17:00 MSK/EEST/PDT'
+    return extra
+
   @app.route('/json')
   def l1_handle():
     return str(json.dumps(json.loads(os.environ['JSON_RESULT'])['l1']))
@@ -129,22 +144,38 @@ if __name__ == '__main__':
   def l2_handle():
     return str(json.dumps(json.loads(os.environ['JSON_RESULT'])['l2']))
 
+  @app.route('/', methods=['GET'])
+  def summary():
+    data = json.loads(os.environ['JSON_RESULT'])
+    stamp = gt(data['timestamp'])
+
+    #l1_on_duty =
+    l2_on_duty = data['od2']
+
+    l1_unpr = ', '.join(data['l1u'])
+    l2_unpr = ', '.join(data['l2u'])
+
+    p1 = 'Unassigned: '+l1_unpr+'\n' + dict2message(data['l1']) if l1_unpr else dict2message(data['l1'])
+    p2 = 'Unassigned: '+l2_unpr+'\n' + process_l2(data['l2'], data['od2']) if l2_unpr else process_l2(data['l2'], data['od2'])
+
+    if stamp < datetime.utcnow()-timedelta(minutes=5):
+      return 'app cache outdated', 500
+
+    r = {}
+    r['response_type'] = 'in_channel'
+    r['text'] = '`# L1: #`\n'+p1 + '`# L2: #`\n'+ p2
+
+    return json.dumps(r), 200, {'Content-Type': 'application/json'}
+
   @app.route('/extra', methods=['GET'])
   def l2_stats():
     data = json.loads(os.environ['JSON_RESULT'])
     l2_stats = data['l2']
-    l2_on_duty = data['od']
-    extra = ''
+    l2_on_duty = data['od2']
     stamp = gt(data['timestamp'])
     prefix = ', '.join(data['l2u'])
 
-    if l2_stats:
-      for e in sorted(l2_stats, key=lambda e: len(l2_stats[e]), reverse=False):
-        extra +='*'+e+'*'+' : '+', '.join(l2_stats[e])+'  `'+str(len(l2_stats[e]))+'`'+str('\n')
-    elif l2_on_duty:
-      extra = l2_on_duty+' is on duty. \n The remaining team will be available soon.'
-    else:
-      extra  = 'No engineers on-duty: L2 escalations team available only at 9:00-17:00 MSK/EEST/PDT'
+    extra = process_l2(l2_stats, l2_on_duty)
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
@@ -155,17 +186,15 @@ if __name__ == '__main__':
 
     return json.dumps(r), 200, {'Content-Type': 'application/json'}
 
-  @app.route('/', methods=['GET'])
+  @app.route('/general', methods=['GET'])
   def l1_stats():
 
     data = json.loads(os.environ['JSON_RESULT'])
     l1_stats = data['l1']
     stamp = gt(data['timestamp'])
-    payload  = ''
     prefix = ', '.join(data['l1u'])
 
-    for k in sorted(l1_stats, key=lambda k: len(l1_stats[k]), reverse=False):
-      payload += '*'+k+'*'+' : '+', '.join(l1_stats[k])+'  `'+str(len(l1_stats[k]))+'`'+str('\n')
+    payload = dict2message(l1_stats)
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
