@@ -23,7 +23,8 @@ sf_usr = parser.get('SalesForce', 'username')
 sf_pwd = parser.get('SalesForce', 'password')
 sf_tkn = parser.get('SalesForce', 'token')
 
-cal_id = parser.get('calendar', 'id')
+sch_cal_id = parser.get('calendar', 'schedule')
+onc_cal_id = parser.get('calendar', 'on-call')
 
 credentials = get_credentials()
 http = credentials.authorize(httplib2.Http())
@@ -52,25 +53,36 @@ def async_job():
 
   sheet = xlrd.open_workbook('l2.xlsx').sheet_by_index(2)
 
-  eventsResult = service.events().list(
-      calendarId=cal_id, timeMin=now, singleEvents = True,
+  shifts = service.events().list(
+      calendarId=sch_cal_id, timeMin=now, singleEvents = True,
       timeMax=then,orderBy='startTime',
       timeZone="UTC").execute()
-  events = eventsResult.get('items', [])
+
+  oncall = service.events().list(
+      calendarId=onc_cal_id, timeMin=now, singleEvents = True,
+      timeMax=then,orderBy='startTime',
+      timeZone="UTC").execute()
 
   result = {}
   l1_crew = {}
   l2_crew = {}
   crew_keys = []
+  on_duty_l1 = []
   on_duty_l2 = ''
   l2_unassigned = []
   l1_unassigned = []
 
-  for event in events:
-    if 'shift' in event['summary']:
+  for event in shifts.get('items',[]):
+    if 'shift' in event['summary'].lower():
       key = event['attendees'].pop()['email']
       if key not in crew_keys:
         crew_keys.append(key)
+
+  for event in oncall.get('items',[]):
+    if 'general oncall' in event['summary'].lower():
+      for e in engineers.values():
+         if e in event['summary']:
+           on_duty_l1.append(e)
 
   for e in l2:
     e_day = datetime.now(l2[e]['tz']).strftime('%A')
@@ -100,6 +112,7 @@ def async_job():
   result['timestamp'] = now
   result['l1'] = l1_crew
   result['l2'] = l2_crew
+  result['od1'] = on_duty_l1
   result['od2'] = on_duty_l2
   result['l1u'] = l1_unassigned
   result['l2u'] = l2_unassigned
@@ -121,11 +134,11 @@ if __name__ == '__main__':
     us= int(us.rstrip("Z"), 10)
     return dt + timedelta(microseconds=us)
 
-  def dict2message(d):
+  def dict2message(d, oncall=None):
     message = ''
     for e in sorted(d, key=lambda e: len(d[e]), reverse=False):
       message +='*'+e+'*'+' : '+', '.join(d[e])+'  `'+str(len(d[e]))+'`'+str('\n')
-    return message
+    return message + 'On-call engineer : *' + ', '.join(oncall) + '*\n' if oncall else message
 
   def process_l2(l2_stats, l2_on_duty):
     if l2_stats:
@@ -149,13 +162,9 @@ if __name__ == '__main__':
     data = json.loads(os.environ['JSON_RESULT'])
     stamp = gt(data['timestamp'])
 
-    #l1_on_duty =
-    l2_on_duty = data['od2']
-
     l1_unpr = ', '.join(data['l1u'])
     l2_unpr = ', '.join(data['l2u'])
-
-    p1 = 'Unassigned: '+l1_unpr+'\n' + dict2message(data['l1']) if l1_unpr else dict2message(data['l1'])
+    p1 = 'Unassigned: '+l1_unpr+'\n' + dict2message(data['l1'], data['od1']) if l1_unpr else dict2message(data['l1'], data['od1'])
     p2 = 'Unassigned: '+l2_unpr+'\n' + process_l2(data['l2'], data['od2']) if l2_unpr else process_l2(data['l2'], data['od2'])
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
@@ -191,10 +200,11 @@ if __name__ == '__main__':
 
     data = json.loads(os.environ['JSON_RESULT'])
     l1_stats = data['l1']
+    l1_oncall = data['od1']
     stamp = gt(data['timestamp'])
     prefix = ', '.join(data['l1u'])
 
-    payload = dict2message(l1_stats)
+    payload = dict2message(l1_stats, l1_oncall)
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
