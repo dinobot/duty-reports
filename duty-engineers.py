@@ -89,7 +89,7 @@ def async_job():
     e_hour = int(datetime.now(l2[e]['tz']).strftime('%H'))
 
     if (e_day != 'Sunday' and e_day != 'Saturday'):
-      if (e_hour >= 9) and (e_hour <= 17 ):
+      if (e_hour >= 9) and (e_hour <= 17):
         l2_crew[e] = []
         for c in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
           l2_crew[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
@@ -106,8 +106,11 @@ def async_job():
     l2_unassigned.append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
 
   for i in xrange(sheet.nrows):
-    if sheet.row_values(i)[5] == 'YES':
-      on_duty_l2+= str(sheet.row_values(i)[2])
+    if isinstance(sheet.row_values(i)[0], float):
+      start = datetime.fromordinal(datetime(1900, 1, 1).toordinal() + int(sheet.row_values(i)[0]) -2)
+      end = datetime.fromordinal(datetime(1900, 1, 1).toordinal() + int(sheet.row_values(i)[1]) -2)
+      if start <= datetime.now() <= end:
+        on_duty_l2+= str(sheet.row_values(i)[2])
 
   result['timestamp'] = now
   result['l1'] = l1_crew
