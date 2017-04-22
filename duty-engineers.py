@@ -79,7 +79,7 @@ def async_job():
         crew_keys.append(key)
 
   for event in oncall.get('items',[]):
-    if 'general oncall' in event['summary'].lower():
+   if 'l1 on call' in event['summary'].lower():
       for e in engineers.values():
          if e in event['summary']:
            on_duty_l1.append(e)
