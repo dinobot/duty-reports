@@ -20,3 +20,4 @@ favicon =
 [misc]
 shift_status_json_url =
 monitor_poll_minutes = 5
+monitor_group_name =
