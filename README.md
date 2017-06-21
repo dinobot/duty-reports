@@ -1,13 +1,4 @@
-# duty-reports
-
-script requres:
-- simple_salesforce
-- Duty list 2016.xlsx
-- engineers.py
-- salesfoce.conf: portal url, salesforce username, salesforce account password (may be different from SSO password if you are using one), security token (available in settings of salesforce account). 
-
-usage: 
-
-python reports.py [day || night]
-
-You need to specify shift for which you are making report (for day shift or for night shift next from yours)
+* case_handle.py - service linking SalesForce case to slack chat using case number.
+* shift_hadnle.py - service providing shift status snapshot to slack chat.
+* http_redirect.py - trivial Flaks script receiving SF case number in HTTP GET and throwing valid SF link with 301.
+* ticket_monitor.py - bot alerting about incoming SF tickets and their status change in a Slack channel. 

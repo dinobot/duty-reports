@@ -7,12 +7,9 @@ token =
 [Slack]
 monitor_hook_url =
 
-[EMail]
-reciever =
-sender =
-
 [calendar]
-id =
+schedule =
+on-call =
 
 [www]
 favicon =
