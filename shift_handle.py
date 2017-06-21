@@ -34,7 +34,7 @@ class Config(object):
     JOBS = [
         {
             'id': 'job1',
-            'func': 'duty-engineers:async_job',
+            'func': 'shift_handle:async_job',
             'trigger': 'interval',
             'seconds': 90
         }
@@ -66,11 +66,14 @@ def async_job():
   result = {}
   l1_crew = {}
   l2_crew = {}
+  l2_off = {}
   crew_keys = []
   on_duty_l1 = []
   on_duty_l2 = ''
   l2_unassigned = []
   l1_unassigned = []
+  l1_off = {}
+  l2_all = {}
 
   for event in shifts.get('items',[]):
     if 'shift' in event['summary'].lower():
@@ -94,10 +97,23 @@ def async_job():
         for c in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
           l2_crew[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
 
-  for k in crew_keys:
-    l1_crew[engineers[k]] = []
-    for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
-      l1_crew[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
+  for e in l2:
+    if e not in l2_crew.keys():
+      l2_off[e] = []
+      for c in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
+        l2_off[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
+
+  for k in engineers.keys():
+      if k in crew_keys:
+        if not l1_crew.get(engineers[k], None):
+          l1_crew[engineers[k]] = []
+        for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
+          l1_crew[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
+      else:
+        if not l1_off.get(engineers[k], None):
+          l1_off[engineers[k]] = []
+        for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
+          l1_off[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
 
   for case in sf.query("SELECT Id, CaseNumber from Case where OwnerId = '00GE0000003YOIEMA4' and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
     l1_unassigned.append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
@@ -119,6 +135,8 @@ def async_job():
   result['od2'] = on_duty_l2
   result['l1u'] = l1_unassigned
   result['l2u'] = l2_unassigned
+  result['offl1'] = l1_off
+  result['offl2'] = l2_off
   os.environ['JSON_RESULT'] = str(json.dumps(result))
 
 async_job()
@@ -200,7 +218,6 @@ if __name__ == '__main__':
 
   @app.route('/general', methods=['GET'])
   def l1_stats():
-
     data = json.loads(os.environ['JSON_RESULT'])
     l1_stats = data['l1']
     l1_oncall = data['od1']
@@ -208,6 +225,46 @@ if __name__ == '__main__':
     prefix = ', '.join(data['l1u'])
 
     payload = dict2message(l1_stats, l1_oncall)
+
+    if stamp < datetime.utcnow()-timedelta(minutes=5):
+      return 'app cache outdated', 500
+
+    r = {}
+    r['response_type'] = 'in_channel'
+    r['text'] = 'Unassigned: '+prefix+'\n' + payload if prefix else payload
+
+    return json.dumps(r), 200, {'Content-Type': 'application/json'}
+
+  @app.route('/all_l1', methods=['GET'])
+  def l1_all():
+    data = json.loads(os.environ['JSON_RESULT'])
+    all_stats = data['l1'].copy()
+    all_stats.update(data['offl1'])
+    payload = dict2message(all_stats)
+    stamp = gt(data['timestamp'])
+    prefix = ', '.join(data['l1u'] + data['l2u'])
+
+    if stamp < datetime.utcnow()-timedelta(minutes=5):
+      return 'app cache outdated', 500
+
+    stamp = gt(data['timestamp'])
+
+    r = {}
+    r['response_type'] = 'in_channel'
+    r['text'] = 'Unassigned: '+prefix+'\n' + payload if prefix else payload
+
+    return json.dumps(r), 200, {'Content-Type': 'application/json'}
+
+  @app.route('/all_l2', methods=['GET'])
+  def l2_all():
+    data = json.loads(os.environ['JSON_RESULT'])
+    all_l2 = data['l2'].copy()
+    all_l2.update(data['offl2'])
+    print data['l2']
+    print data['offl2']
+    payload = dict2message(all_l2)
+    stamp = gt(data['timestamp'])
+    prefix = ', '.join(data['l1u'] + data['l2u'])
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
