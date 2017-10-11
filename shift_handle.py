@@ -94,31 +94,35 @@ def async_job():
     if (e_day != 'Sunday' and e_day != 'Saturday'):
       if (e_hour >= 9) and (e_hour <= 17):
         l2_crew[e] = []
-        for c in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
-          l2_crew[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
+        for c in sf.query("SELECT Id, CaseNumber, AccountCRorMW__c from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted' and status != 'Auto-Solved'")['records']:
+          if not c['AccountCRorMW__c']:
+            l2_crew[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
 
   for e in l2:
     if e not in l2_crew.keys():
       l2_off[e] = []
-      for c in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
-        l2_off[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
+      for c in sf.query("SELECT Id, CaseNumber, AccountCRorMW__c from Case where (OwnerId = '"+l2[e]['uid']+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted' and status != 'Auto-Solved'")['records']:
+        if not c['AccountCRorMW__c']:
+          l2_off[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
 
   for k in engineers.keys():
       if k in crew_keys:
         if not l1_crew.get(engineers[k], None):
           l1_crew[engineers[k]] = []
-        for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
-          l1_crew[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
+        for case in sf.query("SELECT Id, CaseNumber, AccountCRorMW__c from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted' and status != 'Auto-Solved'")['records']:
+          if not case['AccountCRorMW__c']:
+            l1_crew[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
       else:
         if not l1_off.get(engineers[k], None):
           l1_off[engineers[k]] = []
-        for case in sf.query("SELECT Id, CaseNumber from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
-          l1_off[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
+        for case in sf.query("SELECT Id, CaseNumber, AccountCRorMW__c from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted' and status != 'Auto-Solved'")['records']:
+          if not case['AccountCRorMW__c']:
+            l1_off[engineers[k]].append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
 
-  for case in sf.query("SELECT Id, CaseNumber from Case where OwnerId = '00GE0000003YOIEMA4' and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
+  for case in sf.query("SELECT Id, CaseNumber from Case where OwnerId = '00GE0000003YOIEMA4' and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted' and status != 'Auto-Solved'")['records']:
     l1_unassigned.append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
 
-  for case in sf.query("SELECT Id, CaseNumber from Case where OwnerId = '00GE0000003YOIFMA4' and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted'")['records']:
+  for case in sf.query("SELECT Id, CaseNumber from Case where OwnerId = '00GE0000003YOIFMA4' and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted' and status != 'Auto-Solved'")['records']:
     l2_unassigned.append('<'+sf_url+'/console#%2f'+case['Id']+'|'+case['CaseNumber']+'>')
 
   for i in xrange(sheet.nrows):
@@ -260,8 +264,6 @@ if __name__ == '__main__':
     data = json.loads(os.environ['JSON_RESULT'])
     all_l2 = data['l2'].copy()
     all_l2.update(data['offl2'])
-    print data['l2']
-    print data['offl2']
     payload = dict2message(all_l2)
     stamp = gt(data['timestamp'])
     prefix = ', '.join(data['l1u'] + data['l2u'])
