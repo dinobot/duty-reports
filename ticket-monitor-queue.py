@@ -70,7 +70,8 @@ while True:
                           "OwnerId = '%s' and status != 'Closed' and "
                           "status != 'Solved' and status != 'Ignored' "
                           "and status != 'Completed' and status != "
-                          "'Converted'" % monitor_group_id))['records']:
+                          "'Auto-Solved' and status != 'Converted'"
+                          % monitor_group_id))['records']:
         if case['Id'] in ntickets:
             # If the ticket is already already known...
 
