@@ -105,8 +105,11 @@ def async_job():
         if not c['AccountCRorMW__c']:
           l2_off[e].append('<'+sf_url+'/console#%2f'+c['Id']+'|'+c['CaseNumber']+'>')
 
+  print engineers.keys()
+  print crew_keys
   for k in engineers.keys():
       if k in crew_keys:
+        print k
         if not l1_crew.get(engineers[k], None):
           l1_crew[engineers[k]] = []
         for case in sf.query("SELECT Id, CaseNumber, AccountCRorMW__c from Case where (OwnerId = '"+ids[k]+"') and status != 'Closed' and status != 'Solved' and status != 'Ignored' and status != 'Completed' and status != 'Converted' and status != 'Auto-Solved'")['records']:
@@ -246,7 +249,7 @@ if __name__ == '__main__':
     all_stats.update(data['offl1'])
     payload = dict2message(all_stats)
     stamp = gt(data['timestamp'])
-    prefix = ', '.join(data['l1u'] + data['l2u'])
+    prefix = ', '.join(data['l1u'])
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
@@ -266,7 +269,7 @@ if __name__ == '__main__':
     all_l2.update(data['offl2'])
     payload = dict2message(all_l2)
     stamp = gt(data['timestamp'])
-    prefix = ', '.join(data['l1u'] + data['l2u'])
+    prefix = ', '.join(data['l2u'])
 
     if stamp < datetime.utcnow()-timedelta(minutes=5):
       return 'app cache outdated', 500
