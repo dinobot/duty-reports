@@ -23,8 +23,9 @@ sf_usr = parser.get('SalesForce', 'username')
 sf_pwd = parser.get('SalesForce', 'password')
 sf_tkn = parser.get('SalesForce', 'token')
 
-sch_cal_id = parser.get('calendar', 'schedule')
-onc_cal_id = parser.get('calendar', 'on-call')
+sch_cal_id_us = parser.get('calendar', 'schedule_us')
+sch_cal_id_eu = parser.get('calendar', 'schedule_eu')
+onc_cal_id = parser.get('calendar', 'on-call-sch')
 
 credentials = get_credentials()
 http = credentials.authorize(httplib2.Http())
@@ -53,8 +54,13 @@ def async_job():
 
   sheet = xlrd.open_workbook('l2.xlsx').sheet_by_index(2)
 
-  shifts = service.events().list(
-      calendarId=sch_cal_id, timeMin=now, singleEvents = True,
+  shifts_eu = service.events().list(
+      calendarId=sch_cal_id_eu, timeMin=now, singleEvents = True,
+      timeMax=then,orderBy='startTime',
+      timeZone="UTC").execute()
+
+  shifts_us = service.events().list(
+      calendarId=sch_cal_id_us, timeMin=now, singleEvents = True,
       timeMax=then,orderBy='startTime',
       timeZone="UTC").execute()
 
@@ -75,7 +81,13 @@ def async_job():
   l1_off = {}
   l2_all = {}
 
-  for event in shifts.get('items',[]):
+  for event in shifts_eu.get('items',[]):
+    if 'shift' in event['summary'].lower():
+      key = event['attendees'].pop()['email']
+      if key not in crew_keys:
+        crew_keys.append(key)
+
+  for event in shifts_us.get('items',[]):
     if 'shift' in event['summary'].lower():
       key = event['attendees'].pop()['email']
       if key not in crew_keys:

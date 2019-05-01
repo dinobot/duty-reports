@@ -8,8 +8,9 @@ token =
 monitor_hook_url =
 
 [calendar]
-schedule =
-on-call =
+schedule_eu =
+schedule_us =
+on-call-sch =
 
 [www]
 favicon =
